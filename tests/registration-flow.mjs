@@ -1,0 +1,16 @@
+import {spawn} from 'node:child_process';import {mkdtempSync} from 'node:fs';import {tmpdir} from 'node:os';import {join} from 'node:path';import assert from 'node:assert/strict';import {chromium} from '@playwright/test';
+const dir=mkdtempSync(join(tmpdir(),'companion-registration-'));const child=spawn(process.execPath,['server/index.mjs'],{env:{...process.env,PORT:'4322',COMPANION_DATA_DIR:dir},stdio:'ignore'});const base='http://127.0.0.1:4322';const pause=()=>new Promise(r=>setTimeout(r,500));const state=async()=>(await fetch(base+'/api/state')).json();
+async function post(path,data){const r=await fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});assert.equal(r.status,200,await r.text())}
+async function until(fn){for(let i=0;i<480;i++){const s=await state();if(s.agents.some(a=>a.lastError))throw Error(JSON.stringify(s.agents.map(a=>a.lastError)));if(fn(s))return s;await pause()}throw Error('timeout')}
+let browser;
+try{
+ for(let i=0;i<40;i++){try{await state();break}catch{await pause()}}
+ browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
+ const page=await browser.newPage({viewport:{width:1000,height:820}});const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(base);await page.getByLabel('助理名字',{exact:true}).waitFor();await page.screenshot({path:'/tmp/registration-first.png'});
+ const alpha=await page.evaluate(async()=>{const i=new Image();i.src='/characters/xiaobai-anime.png';await i.decode();const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const x=c.getContext('2d');x.drawImage(i,0,0);const d=x.getImageData(0,0,i.width,i.height).data;let n=0;for(let j=3;j<d.length;j+=4)if(d[j]===0)n++;return n/(i.width*i.height)});assert.ok(alpha>.3);console.log('Xiaobai transparent pixels:',alpha);
+ await page.getByRole('button',{name:'继续创建第二位'}).click();await page.getByLabel('可分享近况').fill('测试资料：最近在准备一个读书会。允许向好友分享。');await page.getByRole('button',{name:'查看两张公开名片'}).click();await page.screenshot({path:'/tmp/registration-review.png'});await page.getByRole('checkbox').check();await page.getByRole('button',{name:'验证连接并完成注册'}).click();
+ let s=await until(s=>s.registrationComplete);assert.equal(s.agents.length,2);assert.equal(s.links.length,0);const [a,b]=s.agents;assert.equal(s.directory[1].shareableProfile,undefined);console.log('PASS real two-engine registration, no friendship seeded');
+ await post('/api/chat',{id:a.id,text:'帮我联系黛比'});s=await until(s=>s.links.length===1&&!s.busy.length);assert.equal(s.friendRequests[0].status,'accepted');assert.equal(s.messages.filter(m=>m.channel==='friend').length,0);assert.ok(s.messages.some(m=>m.text.includes('对方已同意好友申请')));console.log('PASS owner-name discovery → request → policy acceptance → owner confirmation, no premature question');
+ await post('/api/chat',{id:a.id,text:'你了解黛比最近在干嘛？'});s=await until(s=>s.reports.length&&!s.busy.length);assert.match(s.reports[0].text,/读书会/);console.log('PASS real GLM → Codex → GLM follow-up');
+ assert.deepEqual(errors,[]);console.log('PASS browser no errors; test data:',dir);
+}finally{await browser?.close();child.kill('SIGTERM')}

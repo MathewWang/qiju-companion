@@ -23,3 +23,8 @@
 后续布局调整：宽屏桌面采用角色在左、面板在右，顺着人物抬手方向展开；窗口展开620×540、收起240×320，保持左侧人物锚点，超出屏幕时约束到工作区。深黑色面板背景 #111318，Liquid 材质仅用于消息气泡、输入框与按钮。窄于600px的浏览器窗口保留上下排布以避免截断。tests/glass.mjs另验证右侧几何关系和面板黑色背景。
 
 动画优化：后续取消展开/收起时的原生窗口 resize，始终使用透明620×540画布（屏幕不足时约束）。人物通过GPU transform在右侧静止位置和左侧聊天位置之间移动380px；聊天面板保持挂载，以transform/opacity同步520ms展开，关闭时inert且不接收点击。没有220ms等待，避免原生窗口重绘与网页动画竞争；透明区继续鼠标穿透，且鼠标穿透IPC只在状态改变时发送。减少动态效果设置下立即切换。浏览器RAF采样确认人物移动与面板淡入同步，约700ms内42帧，最大间隔33ms（测试环境结果，不代表所有机器帧率）。
+
+## 小白系统预制（2026-11-03）
+素材：public/characters/xiaobai-anime.png。imagegen reference generation，transparent_background=true，参考用户提供肖像的气质，原创成年动漫助理。1024×1536 PNG，浏览器像素检查约73.8%为完全透明像素。与桃桃一起作为注册选项，Agent仅保存preset skin ID。
+生成提示词：
+> Use case: stylized-concept. Create an original full-body anime/manhwa character cutout for a desktop personal assistant named Xiaobai. The attached portrait is a reference only for her gentle facial expression, dark loosely tied hair with wispy bangs, pearl earrings and fresh understated grace. Clearly adult woman age 25. Polished premium anime rendering, subtly realistic shading, consistent with a refined desktop anime companion collection. Full head-to-toe standing pose, facing forward slightly three-quarter, warm small smile, right hand slightly lifted toward viewer's right in a welcoming conversational gesture. Outfit: elegant ivory cardigan over a pale blue modest blouse and slate-blue pleated midi skirt, simple cream ankle boots, fine pearl earrings. Natural adult proportions, not chibi, no sexualization. Entire figure including both shoes visible, tight portrait framing and readable silhouette. Only the character; actual transparent alpha background with fully clear pixels outside silhouette, no backdrop, no gradient, no glow, no floor, no frame, no text. PNG production sprite.
