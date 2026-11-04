@@ -88,12 +88,14 @@ const server=http.createServer(async(req,res)=>{
  if(url.pathname==='/api/events'){res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache','Connection':'keep-alive'});clients.add(res);res.write(`data: ${JSON.stringify(snapshot())}\n\n`);req.on('close',()=>clients.delete(res));return;}
  if(req.method!=='POST')return send(res,405,{error:'不支持的方法'});
  const b=await body(req);const p=url.pathname;
- if(p==='/api/register-batch'){
+ if(p==='/api/register'||p==='/api/register-batch'){
  if(state.registrationComplete||state.agents.length)throw Error('当前空间已注册完成');
  if(registrationBusy)throw Error('正在登记，请稍候');
- if(!Array.isArray(b.agents)||b.agents.length!==2)throw Error('请填写两位助理');
- const created=b.agents.map(makeAgent);
- if(created[0].name===created[1].name)throw Error('两位助理需要不同的名字');
+ if(p==='/api/register'&&b.verifyConnection!==true)throw Error('请先同意发送一条测试消息验证模型连接');
+ const inputs=p==='/api/register'?[b.agent]:b.agents;
+ if(!Array.isArray(inputs)||(p==='/api/register-batch'&&inputs.length!==2))throw Error('请填写两位助理');
+ const created=inputs.map(makeAgent);
+ if(created.length===2&&created[0].name===created[1].name)throw Error('两位助理需要不同的名字');
  registrationBusy=true;
  try{
  const checks=await Promise.allSettled(created.map(a=>runAgent({agent:a,history:[],message:'只回复：连接成功。不要调用工具。',dataDir})));
@@ -101,7 +103,7 @@ const server=http.createServer(async(req,res)=>{
  if(failures.length)throw Error(failures.join('；'));
  for(const a of created)a.verifiedAt=Date.now();
  state.agents.push(...created);state.primaryAgentId=created[0].id;state.registrationComplete=true;
- addMessage(created[0].id,'assistant',`${created[0].ownerName}，我是${created[0].name}。我已经准备好了。你可以说“帮我联系${created[1].ownerName}”，我会先找到对方的名片、申请建立联系。`);
+ addMessage(created[0].id,'assistant',`${created[0].ownerName}, 我是${created[0].name}。我已经准备好了。你可以先和我聊聊，再到设置中完善资料。`);
  persist();
  }finally{registrationBusy=false;}
  }else if(p==='/api/friend-request'){
@@ -111,7 +113,7 @@ const server=http.createServer(async(req,res)=>{
  }else if(p==='/api/select-agent'){
  agentBy(b.id);state.primaryAgentId=b.id;persist();
  }else if(p==='/api/agents'){
- throw Error('请从首页完成双 Agent 注册，本版不支持实验室直接创建');
+ throw Error('请从首页完成助理注册，本版不支持实验室直接创建');
  }else if(p==='/api/profile'){
  const a=agentBy(b.id);
  if(typeof b.ownerName==='string'&&b.ownerName.trim())a.ownerName=b.ownerName.trim().slice(0,60);

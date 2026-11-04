@@ -13,7 +13,7 @@ function openHistory(id){
  if(!id)return;
  let history=histories.get(id);
  if(!history){
-  history=new BrowserWindow({width:520,height:700,minWidth:360,minHeight:480,show:false,title:'栖居 · 历史聊天',transparent:true,backgroundColor:'#00000000',webPreferences:preferences});
+  history=new BrowserWindow({width:520,height:700,minWidth:360,minHeight:480,show:false,title:'知交信使 · 历史聊天',transparent:true,backgroundColor:'#00000000',webPreferences:preferences});
   histories.set(id,history);history.loadURL(url+'/?history=1&agent='+encodeURIComponent(id));
   history.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   history.on('close',e=>{if(!quitting){e.preventDefault();history.hide()}});
@@ -27,7 +27,7 @@ function createPets(agents){
   // Each companion owns its canvas and conversation; transparent regions pass through.
   const gap=Math.min(640,Math.max(250,(work.width-260)/Math.max(1,agents.length-1)));
   const canvas=expandedBounds({x:work.x+work.width-260-index*gap,y:work.y+work.height-335,width:240,height:320},work);
-  const pet=new BrowserWindow({...canvas,title:a.name+' · 栖居',transparent:true,backgroundColor:'#00000000',frame:false,hasShadow:false,resizable:false,alwaysOnTop:true,skipTaskbar:true,webPreferences:preferences});
+  const pet=new BrowserWindow({...canvas,title:a.name+' · 知交信使',transparent:true,backgroundColor:'#00000000',frame:false,hasShadow:false,resizable:false,alwaysOnTop:true,skipTaskbar:true,webPreferences:preferences});
   pets.set(a.id,pet);pet.loadURL(url+'/?agent='+encodeURIComponent(a.id));
   pet.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   pet.on('closed',()=>pets.delete(a.id));
@@ -39,7 +39,7 @@ app.whenReady().then(async()=>{
  await ready();
  const state=await (await fetch(url+'/api/state')).json();
  if(state.registrationComplete===false){
-  setup=new BrowserWindow({width:1000,height:820,minWidth:760,minHeight:650,title:'栖居 · 注册助理',backgroundColor:'#151719',webPreferences:preferences});
+  setup=new BrowserWindow({width:1000,height:820,minWidth:760,minHeight:650,title:'知交信使 · 注册助理',backgroundColor:'#151719',webPreferences:preferences});
   setup.loadURL(url+'/?register=1');setup.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   setup.on('closed',()=>{setup=null;if(!pets.size)app.quit()});
  }else createPets(state.agents);
@@ -47,8 +47,8 @@ app.whenReady().then(async()=>{
  ipcMain.on('open-history',(_e,id)=>openHistory(id));
  ipcMain.on('hide-history',e=>BrowserWindow.fromWebContents(e.sender)?.hide());
  ipcMain.on('pointer-through',(e,value)=>{const win=BrowserWindow.fromWebContents(e.sender);if([...pets.values()].includes(win))win.setIgnoreMouseEvents(value===true,{forward:true})});
- tray=new Tray(nativeImage.createEmpty());tray.setTitle('✳');tray.setToolTip('栖居 · 我的助理');
- tray.setContextMenu(Menu.buildFromTemplate([{label:'显示所有助理',click:showAll},{label:'查看历史聊天',click:()=>openHistory()},{type:'separator'},{label:'退出栖居',click:()=>app.quit()}]));
+ tray=new Tray(nativeImage.createEmpty());tray.setTitle('✳');tray.setToolTip('知交信使 · 我的助理');
+ tray.setContextMenu(Menu.buildFromTemplate([{label:'显示所有助理',click:showAll},{label:'查看历史聊天',click:()=>openHistory()},{type:'separator'},{label:'退出知交信使',click:()=>app.quit()}]));
  app.on('activate',showAll);
 }).catch(e=>{console.error(e);app.quit()});
 app.on('before-quit',()=>{quitting=true;service?.kill()});

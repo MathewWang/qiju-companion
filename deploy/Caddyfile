@@ -1,0 +1,7 @@
+# Enable the public endpoint only after ICP filing and DNS/TLS are ready.
+relay.agentmen.cn {
+    request_body {
+        max_size 32KB
+    }
+    reverse_proxy 127.0.0.1:4318
+}

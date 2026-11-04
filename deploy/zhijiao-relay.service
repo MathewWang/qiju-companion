@@ -1,0 +1,21 @@
+[Unit]
+Description=Zhijiao Messenger Relay
+After=network.target
+
+[Service]
+Type=simple
+User=zhijiao
+WorkingDirectory=/opt/zhijiao/current
+EnvironmentFile=/etc/zhijiao/relay.env
+ExecStart=/opt/zhijiao/node/bin/node /opt/zhijiao/current/relay/server.mjs
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/zhijiao
+
+[Install]
+WantedBy=multi-user.target
