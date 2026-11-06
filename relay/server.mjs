@@ -42,6 +42,9 @@ export function createRelay({dbPath,inviteToken}) {
     const device=store.register(body.name.trim(),token,profile);
     return send(201,{...device,token});
    }
+   if(req.method==='GET'&&path==='/v1/visits')return send(200,store.visits(actor.id));
+   if(req.method==='POST'&&path==='/v1/visits')return send(201,store.createVisit(actor.id,body));
+   if(req.method==='POST'&&path==='/v1/visits/action')return send(200,store.actVisit(actor.id,body));
    if(req.method==='GET'&&path==='/v1/directory')return send(200,store.directory());
    if(req.method==='GET'&&path==='/v1/requests')return send(200,store.requests(actor.id));
    if(req.method==='POST'&&path==='/v1/requests')return send(200,store.request(actor.id,body.to));
@@ -64,6 +67,6 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(realpathSync(resolve(process
  const dir=resolve(process.env.RELAY_DATA_DIR||'.data/relay');mkdirSync(dir,{recursive:true,mode:0o700});
  const {server,store}=createRelay({dbPath:join(dir,'relay.sqlite'),inviteToken:process.env.RELAY_INVITE_TOKEN});
  const port=Number(process.env.PORT||4318);server.listen(port,process.env.HOST||'127.0.0.1',()=>console.log(`知交信使 Relay listening on ${port}`));
- const cleanup=setInterval(()=>store.db.prepare('DELETE FROM messages WHERE acknowledged_at < ?').run(Date.now()-7*86400000),3600000);cleanup.unref();
+ const cleanup=setInterval(()=>{const cutoff=Date.now()-7*86400000;store.db.prepare('DELETE FROM messages WHERE acknowledged_at < ?').run(cutoff);store.db.prepare("DELETE FROM visits WHERE json_extract(json,'$.endedAt') < ?").run(cutoff)},3600000);cleanup.unref();
  for(const sig of ['SIGTERM','SIGINT'])process.on(sig,()=>{clearInterval(cleanup);server.close(()=>{store.close();process.exit(0);});});
 }

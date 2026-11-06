@@ -1,5 +1,6 @@
 import {DatabaseSync} from 'node:sqlite';
 import {createHash, randomUUID} from 'node:crypto';
+import {createVisit,actOnVisit,expireVisits} from '../shared/visits.mjs';
 export const hash = value => createHash('sha256').update(value).digest('hex');
 export class RelayStore {
  constructor(path) {
@@ -10,6 +11,7 @@ export class RelayStore {
    CREATE UNIQUE INDEX IF NOT EXISTS pending_pair ON requests(min(sender,recipient),max(sender,recipient)) WHERE status='pending';
    CREATE TABLE IF NOT EXISTS friendships(a TEXT NOT NULL REFERENCES devices(id), b TEXT NOT NULL REFERENCES devices(id), PRIMARY KEY(a,b));
    CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY, sender TEXT NOT NULL REFERENCES devices(id), recipient TEXT NOT NULL REFERENCES devices(id), client_key TEXT NOT NULL, kind TEXT NOT NULL, text TEXT NOT NULL, reply_to TEXT, created_at INTEGER NOT NULL, lease_until INTEGER NOT NULL DEFAULT 0, acknowledged_at INTEGER, UNIQUE(sender,client_key));`);
+  this.db.exec('CREATE TABLE IF NOT EXISTS visits(id TEXT PRIMARY KEY, sender TEXT NOT NULL, recipient TEXT NOT NULL, json TEXT NOT NULL)');
   if(!this.db.prepare('PRAGMA table_info(devices)').all().some(c=>c.name==='profile_json'))this.db.exec("ALTER TABLE devices ADD COLUMN profile_json TEXT");
  }
  register(name, token, profile=null) { const id=randomUUID(); this.db.prepare('INSERT INTO devices(id,token_hash,name,created_at,profile_json) VALUES(?,?,?,?,?)').run(id,hash(token),name,Date.now(),profile?JSON.stringify(profile):null); return {id,name}; }
@@ -60,5 +62,17 @@ export class RelayStore {
   const result=this.db.prepare('UPDATE messages SET acknowledged_at=COALESCE(acknowledged_at,?) WHERE id=? AND recipient=?').run(Date.now(),id,recipient);
   if(!result.changes)throw Error('消息不存在');return {ok:true};
  }
+ visitTransaction(fn){
+  this.db.exec('BEGIN IMMEDIATE');try{
+   const visits=this.db.prepare('SELECT json FROM visits ORDER BY rowid').all().map(r=>JSON.parse(r.json));
+   expireVisits(visits);const result=fn(visits);
+   const save=this.db.prepare('INSERT OR REPLACE INTO visits(id,sender,recipient,json) VALUES(?,?,?,?)');
+   for(const v of visits)save.run(v.id,v.from,v.to,JSON.stringify(v));
+   this.db.exec('COMMIT');return result;
+  }catch(e){this.db.exec('ROLLBACK');throw e;}
+ }
+ visits(actor){return this.visitTransaction(visits=>visits.filter(v=>v.from===actor||v.to===actor));}
+ createVisit(actor,body){return this.visitTransaction(visits=>createVisit(visits,{...body,from:actor},(a,b)=>this.friends(a,b)));}
+ actVisit(actor,body){return this.visitTransaction(visits=>actOnVisit(visits,{...body,actor}));}
  close(){this.db.close();}
 }

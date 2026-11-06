@@ -1,8 +1,6 @@
 import {randomUUID} from 'node:crypto';
-export const presets=[
- {id:'taotao',name:'桃桃',image:'/characters/taotao-anime.png',description:'成熟、温暖，善于梳理信息'},
- {id:'xiaobai',name:'小白',image:'/characters/xiaobai-anime.png',description:'清新、细致，善于沟通协作'}
-];
+import characters from '../shared/characters.json' with {type:'json'};
+export const presets=characters;
 export function makeAgent(input){
  if(!input||typeof input!=='object'||Array.isArray(input))throw Error('请填写助理资料');
  const str=(key,max,required=false)=>{const value=typeof input[key]==='string'?input[key].trim():'';if((required&&!value)||value.length>max)throw Error(`请检查${{name:'助理名字',ownerName:'主人称呼',model:'模型',publicBio:'公开简介',shareableProfile:'可分享近况',persona:'性格与职责'}[key]||key}`);return value};

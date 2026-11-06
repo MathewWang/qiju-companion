@@ -1,4 +1,4 @@
-const {app,BrowserWindow,ipcMain,screen,Tray,Menu,nativeImage}=require('electron');
+const {app,BrowserWindow,ipcMain,screen,Tray,Menu,nativeImage,shell}=require('electron');
 const {spawn}=require('node:child_process');
 const path=require('node:path');
 const {expandedBounds}=require('./window-placement.cjs');
@@ -43,6 +43,7 @@ app.whenReady().then(async()=>{
   setup.loadURL(url+'/?register=1');setup.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   setup.on('closed',()=>{setup=null;if(!pets.size)app.quit()});
  }else createPets(state.agents);
+ ipcMain.handle('open-visit-link',async(_event,value)=>{if(typeof value!=='string'||value.length>2000)throw Error('Invalid link');const target=new URL(value);if(target.protocol!=='https:'||target.username||target.password)throw Error('Only HTTPS links are supported');await shell.openExternal(target.href)});
  ipcMain.handle('finish-registration',async()=>{const current=await (await fetch(url+'/api/state')).json();if(!current.registrationComplete)throw Error('请先完成注册');createPets(current.agents);setup?.close()});
  ipcMain.on('open-history',(_e,id)=>openHistory(id));
  ipcMain.on('hide-history',e=>BrowserWindow.fromWebContents(e.sender)?.hide());

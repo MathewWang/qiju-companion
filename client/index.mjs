@@ -1,4 +1,5 @@
 import {mkdirSync,readFileSync,writeFileSync,existsSync,chmodSync,openSync,closeSync,unlinkSync} from 'node:fs';
+import {randomUUID} from 'node:crypto';
 import {resolve,join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import {normalizeAgent,registrationPayload} from '../shared/agent-profile.mjs';
@@ -9,6 +10,9 @@ const [command,...args]=process.argv.slice(2);
 const usage=`知交信使 · 无头 Client
   init <https://relay.example.com> <公开设备名>  # CLIENT_INVITE_TOKEN 环境变量；CLIENT_AGENT_FILE 指向本机角色 JSON
   check                                      # 校验本地角色并预览公开资料，不注册、不调用模型
+  visits                                     # 查看拜访、口信和回复
+  visit <好友设备ID> <口信>                    # 确认并发送拜访邀请（24 小时有效）
+  visit-action <拜访ID> <accept|decline|cancel|end> [捎回的话]
   directory                                  # 查看邀请制目录
   request <设备ID>                            # 申请好友
   requests                                   # 查看申请
@@ -47,7 +51,10 @@ async function main(){
  const stop=()=>controller.abort();process.once('SIGINT',stop);process.once('SIGTERM',stop);
  const c=new MessengerClient({config,dbPath:join(dir,'client.sqlite'),dataDir:dir,recoverProcessing:['run','retry'].includes(command)});
  try{
-  if(command==='directory')console.log(JSON.stringify(await c.api('/v1/directory'),null,2));
+  if(command==='visits')console.log(JSON.stringify(await c.api('/v1/visits'),null,2));
+  else if(command==='visit')console.log(JSON.stringify(await c.api('/v1/visits',{to:args[0],note:args.slice(1).join(' '),key:randomUUID()}),null,2));
+  else if(command==='visit-action')console.log(JSON.stringify(await c.api('/v1/visits/action',{id:args[0],action:args[1],reply:args.slice(2).join(' ')}),null,2));
+  else if(command==='directory')console.log(JSON.stringify(await c.api('/v1/directory'),null,2));
   else if(command==='requests')console.log(JSON.stringify(await c.api('/v1/requests'),null,2));
   else if(command==='request')console.log(JSON.stringify(await c.api('/v1/requests',{to:args[0]}),null,2));
   else if(['accept','decline'].includes(command))console.log(JSON.stringify(await c.api('/v1/requests/decision',{id:args[0],accept:command==='accept'}),null,2));

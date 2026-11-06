@@ -1,0 +1,4 @@
+import React from 'react';
+import characters from '../shared/characters.json';
+import './character-gallery.css';
+export function CharacterGallery(){return <div className="character-gallery"><header><a href="/">✳ 知交信使</a><span>形象图鉴 · 8 位伙伴</span></header><main><h1>选一个合眼缘的伙伴。</h1><p>形象只决定外观，名字、性格和职责由你定义。每位形象都提供眨眼、招手、坐下和站起动作。</p><div className="character-grid">{characters.map(c=><article key={c.id}><div className="gallery-portrait"><img src={c.image} alt={`${c.name}，${c.description}`} loading="lazy"/></div><div className="gallery-details"><div><h2>{c.name}</h2><span>{c.gender} · {c.animated?'已有动作':'静态立绘'}</span></div><p>{c.description}</p><a className="gallery-motion-link" href={`/?motion=1&character=${c.id}`}>试试动作 ↗</a><a href={`/?register=1&skin=${c.id}`}>选择这个形象 →</a></div></article>)}</div></main></div>}

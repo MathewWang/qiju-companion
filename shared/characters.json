@@ -1,0 +1,106 @@
+[
+  {
+    "id": "taotao",
+    "name": "桃桃",
+    "gender": "女士",
+    "description": "黑金长裙、成熟温暖的形象",
+    "animated": true,
+    "image": "/characters/taotao-anime.png",
+    "motion": {
+      "sheet": "/characters/taotao-motion-v1.png",
+      "columns": 4,
+      "rows": 3
+    }
+  },
+  {
+    "id": "xiaobai",
+    "name": "小白",
+    "gender": "女士",
+    "description": "开衫长裙、清新温柔的形象",
+    "animated": true,
+    "image": "/characters/xiaobai-anime.png",
+    "motion": {
+      "sheet": "/characters/xiaobai-motion-v1.png",
+      "columns": 4,
+      "rows": 3
+    }
+  },
+  {
+    "id": "qinghe",
+    "name": "清禾",
+    "gender": "女士",
+    "description": "短发、利落的都市形象",
+    "animated": true,
+    "image": "/characters/qinghe-anime.png",
+    "motion": {
+      "sheet": "/characters/qinghe-motion-v1.png",
+      "columns": 4,
+      "rows": 3
+    }
+  },
+  {
+    "id": "xinglan",
+    "name": "星岚",
+    "gender": "女士",
+    "description": "长发、沉静的蓝色系形象",
+    "animated": true,
+    "image": "/characters/xinglan-anime.png",
+    "motion": {
+      "sheet": "/characters/xinglan-motion-v1.png",
+      "columns": 4,
+      "rows": 3
+    }
+  },
+  {
+    "id": "tangli",
+    "name": "棠梨",
+    "gender": "女士",
+    "description": "卷发、明亮温暖的形象",
+    "animated": true,
+    "image": "/characters/tangli-anime.png",
+    "motion": {
+      "sheet": "/characters/tangli-motion-v1.png",
+      "columns": 4,
+      "rows": 3
+    }
+  },
+  {
+    "id": "yuexia",
+    "name": "月夏",
+    "gender": "女士",
+    "description": "高马尾、轻盈休闲的形象",
+    "animated": true,
+    "image": "/characters/yuexia-anime.png",
+    "motion": {
+      "sheet": "/characters/yuexia-motion-v1.png",
+      "columns": 4,
+      "rows": 3
+    }
+  },
+  {
+    "id": "yanzhou",
+    "name": "言舟",
+    "gender": "男士",
+    "description": "眼镜、沉稳的商务休闲形象",
+    "animated": true,
+    "image": "/characters/yanzhou-anime.png",
+    "motion": {
+      "sheet": "/characters/yanzhou-motion-v1.png",
+      "columns": 4,
+      "rows": 3
+    }
+  },
+  {
+    "id": "jingchuan",
+    "name": "景川",
+    "gender": "男士",
+    "description": "微卷短发、自然休闲的形象",
+    "animated": true,
+    "image": "/characters/jingchuan-anime.png",
+    "motion": {
+      "sheet": "/characters/jingchuan-motion-v1.png",
+      "columns": 4,
+      "rows": 3
+    }
+  }
+]

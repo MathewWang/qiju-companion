@@ -1,3 +1,5 @@
+import {CharacterGallery} from './CharacterGallery';
+import {MotionPreview} from './MotionPreview';
 import React,{useEffect,useState,useRef} from 'react';
 import {createRoot} from 'react-dom/client';
 import {Plus,ArrowUp,MessageCircle,Users,NotebookPen,Pause,Play,Square,ChevronRight,Radio,Check,Sun,Settings2,X} from 'lucide-react';
@@ -30,4 +32,4 @@ function App(){const [s,setS]=useState<State>({agents:[],messages:[],links:[],re
  <footer>知交信使 / LOCAL DEMO <span>让每一次交流，都有一个值得记住的结果。</span></footer></main>
  {modal&&<div className="overlay"><form className="modal" onSubmit={create}><div className="modal-title"><h2>认识你的新助理</h2><button type="button" aria-label="关闭" onClick={()=>setModal(false)}><X/></button></div><div className="skin-options">{['mint','peach','violet'].map(k=><button type="button" aria-label={'形象 '+k} className={skin===k?'picked':''} key={k} onClick={()=>setSkin(k)}><Creature skin={k} small/>{skin===k&&<Check size={14}/>}</button>)}</div><label>怎么称呼它<input aria-label="助理名字" required maxLength={40} placeholder="例如：小白" value={name} onChange={e=>setName(e.target.value)}/></label><label>主人称呼<input aria-label="主人称呼" value={ownerName} onChange={e=>setOwnerName(e.target.value)}/></label><label>连接本地引擎<select aria-label="引擎" value={engine} onChange={e=>setEngine(e.target.value)}><option value="codex">Codex</option><option value="opencode">OpenCode + GLM</option></select></label>{engine==='opencode'&&<label>模型标识<input value={model} onChange={e=>setModel(e.target.value)}/></label>}<label>性格与职责<textarea value={persona} onChange={e=>setPersona(e.target.value)}/></label><p className="muted">使用现有本机登录。创建独立角色，不导入已有工作聊天。</p><button className="primary full" disabled={pending||!name.trim()}>创建并入住 <ChevronRight size={16}/></button></form></div>}</div>
 }
-createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).has('studio')?<App/>:<LiteApp/>);
+createRoot(document.getElementById('root')!).render(new URLSearchParams(location.search).has('characters')?<CharacterGallery/>:new URLSearchParams(location.search).has('motion')?<MotionPreview/>:new URLSearchParams(location.search).has('studio')?<App/>:<LiteApp/>);

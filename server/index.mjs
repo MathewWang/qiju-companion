@@ -1,3 +1,4 @@
+import {createVisit,actOnVisit,expireVisits} from '../shared/visits.mjs';
 import http from 'node:http';
 import {parseDecision,socialInstructions} from './social.mjs';
 import {presets,makeAgent,publicCard,requestFriend,decideFriend} from './registration.mjs';
@@ -18,12 +19,12 @@ for(const a of state.agents){
  if(a.shareableProfile==null)a.shareableProfile='';
 }
 if(!state.primaryAgentId)state.primaryAgentId=state.agents.find(a=>a.name==='桃桃')?.id||state.agents[0]?.id||null;
-state.friendRequests??=[];
+state.friendRequests??=[];state.visits??=[];
 state.registrationComplete??=state.agents.length>0;
 let registrationBusy=false;
 const save=()=>db.prepare('INSERT OR REPLACE INTO state VALUES (1,?)').run(JSON.stringify(state));
 const jobs=new Map();const clients=new Set();let engines=await detect();
-const snapshot=()=>({...state,engines,presets,directory:state.agents.filter(a=>a.public!==false).map(publicCard),busy:[...jobs.keys()]});
+const snapshot=()=>{if(expireVisits(state.visits))save();return ({...state,engines,presets,directory:state.agents.filter(a=>a.public!==false).map(publicCard),busy:[...jobs.keys()]})};
 function notify(){for(const c of clients)c.write(`data: ${JSON.stringify(snapshot())}\n\n`)}
 function persist(){save();notify()}
 function addMessage(agentId,role,text,extra={}){const m={id:randomUUID(),agentId,role,text,createdAt:Date.now(),...extra};state.messages.push(m);return m}
@@ -106,6 +107,11 @@ const server=http.createServer(async(req,res)=>{
  addMessage(created[0].id,'assistant',`${created[0].ownerName}, 我是${created[0].name}。我已经准备好了。你可以先和我聊聊，再到设置中完善资料。`);
  persist();
  }finally{registrationBusy=false;}
+ }else if(p==='/api/visits'){
+ agentBy(b.from);agentBy(b.to);
+ createVisit(state.visits,b,(a,c)=>state.links.some(l=>l.includes(a)&&l.includes(c)));persist();
+ }else if(p==='/api/visits/action'){
+ agentBy(b.actor);actOnVisit(state.visits,b);persist();
  }else if(p==='/api/friend-request'){
  agentBy(b.from);agentBy(b.to);invite(b.from,b.to);processInvites(b.to);
  }else if(p==='/api/friend-decision'){
@@ -143,3 +149,5 @@ const server=http.createServer(async(req,res)=>{
 server.listen(port,'127.0.0.1',()=>{console.log(`Companion ready: ${origin}`);for(const a of state.agents){processInvites(a.id);drain(a.id)}});
 setInterval(()=>{for(const c of clients)c.write(': keepalive\n\n')},20000).unref();
 for(const sig of ['SIGTERM','SIGINT'])process.on(sig,()=>{for(const c of jobs.values())c.abort();server.close();process.exit()});
+
+const visitExpiry=setInterval(()=>{if(expireVisits(state.visits))persist()},5000);visitExpiry.unref();

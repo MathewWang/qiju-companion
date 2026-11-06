@@ -6,6 +6,7 @@ src=$(cd "$(dirname "$0")/.." && pwd)
 test -f "$src/relay/server.mjs"
 test -f "$src/relay/store.mjs"
 test -f "$src/shared/agent-profile.mjs"
+test -f "$src/shared/visits.mjs"
 for command in curl tar xz openssl sha256sum; do
  if ! command -v "$command" >/dev/null; then echo "缺少 $command，请从系统仓库安装 curl tar xz openssl coreutils" >&2; exit 1; fi
 done
@@ -37,7 +38,7 @@ if [[ ! -f /etc/zhijiao/relay.env ]]; then
 fi
 release="/opt/zhijiao/releases/$(date -u +%Y%m%dT%H%M%SZ)-$$"
 install -d -m 0755 "$release/relay" "$release/shared"
-install -m 0644 "$src/shared/agent-profile.mjs" "$release/shared/"
+install -m 0644 "$src/shared/agent-profile.mjs" "$src/shared/visits.mjs" "$release/shared/"
 install -m 0644 "$src/relay/server.mjs" "$src/relay/store.mjs" "$release/relay/"
 /opt/zhijiao/node/bin/node --check "$release/relay/server.mjs"
 /opt/zhijiao/node/bin/node --check "$release/relay/store.mjs"

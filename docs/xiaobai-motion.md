@@ -1,0 +1,9 @@
+# 小白动作素材
+
+使用内置 image_gen，根据原小白立绘生成透明 4×3 图集，保存到 `public/characters/xiaobai-motion-v1.png`。原图保留。动作包括眨眼、招手、坐下和反向站起；与桃桃共用逐帧播放器和消息/休息状态规则。预览入口：`/?motion=1&character=xiaobai`。
+
+当前为 12 格方向原型，脸部和衣服细节仍有帧间变化，坐姿过渡也偏粗，后续需要补中间帧。不是 Live2D 或骨骼模型。
+
+## 最终提示词（内置工具模式）
+
+Use case: identity-preserve. Make a production transparent PNG animation SPRITE SHEET from this exact referenced woman, Xiaobai. Preserve her young adult face, dark low ponytail with loose strands, cream cardigan, pale blue buttoned blouse, blue-gray pleated midi skirt, cream ankle boots, delicate earrings, gentle warm smile and softly rendered illustration style. ONE strict regular 4 columns x 3 rows sheet, ideally 2048x1536, exactly 12 equal square cells. Full-body figure centered at identical scale, front slightly three-quarter view, fixed camera, feet baseline at 94% in every cell, standing head at 8%, all hair and fingers inside cells with generous margins. Real alpha transparency only, no background glow, no labels, no borders, no lettering. Row 1 consecutive idle frames: relaxed arms down, open eyes; half blink; closed eyes; eyes open. Row 2 consecutive wave frames: same stable standing body and feet, right arm raised at shoulder, palm facing viewer, hand tilting left-center-right-center in a friendly wave, elbow and shoulder steady. Row 3 sit-down transition in four consecutive frames: shallow knee bend, lowering halfway onto a small plain stool, nearly seated, fully seated upright hands on lap knees together, skirt drapes naturally. Keep the seated figure at the same physical scale and lower its head naturally; DO NOT enlarge seated poses. Stool appears only in row3. Consistent face, outfit, body proportions, registration across all 12 frames is essential for stepped sprite animation. No extra characters or cell cropping.
