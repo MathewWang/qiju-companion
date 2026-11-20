@@ -7,11 +7,14 @@
   "scripts": {
     "start": "node server/index.mjs",
     "dev": "node server/index.mjs",
-    "desktop": "electron .",
+    "desktop": "node scripts/desktop.mjs launch",
     "build": "tsc --noEmit && vite build",
     "test": "node --test tests/*.test.mjs",
     "relay": "node relay/server.mjs",
-    "client": "node client/index.mjs"
+    "client": "node client/index.mjs",
+    "desktop:check": "node scripts/desktop.mjs check",
+    "desktop:setup": "node scripts/desktop.mjs setup",
+    "desktop:update": "node scripts/desktop.mjs update"
   },
   "dependencies": {
     "react": "^19.0.0",

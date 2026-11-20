@@ -122,3 +122,13 @@ Client 统一校验角色字段及公开授权，同一目录通过注册锁防�
 部署包需包含共享模块：`tar -czf .data/deploy/zhijiao-relay.tar.gz relay shared deploy`。新 Client 应在新版 Relay 部署后注册；旧 Relay 不会保存新的名片字段。
 
 尚未实现主人账号、跨设备绑定、设备撤销、令牌恢复、单次邀请码及注册响应丢失后的恢复。当前仍以设备作为身份，公开称呼不代表经过认证的主人身份。
+
+## 公网入口部署记录（2026-11-20）
+
+备案通过后，已通过 Workbench 部署提交 29c758d 的 Relay，使用 Nginx 将 agentmen.cn 反向代理到 127.0.0.1:4318。安全组已放行 TCP 80/443。根域名 A 记录指向 47.117.140.69。
+
+首页包含沪ICP备2026062119号-1及工信部链接。Let's Encrypt 证书已签发并部署，有效期到 2027-02-18，Certbot 提示已配置自动续期任务。
+
+公网指定目标 IP 并保留真实域名的证书验证通过。HTTPS /healthz 返回 200，未携带令牌的 /v1/directory 返回 401，HTTP 跳转 HTTPS。部署时本机 DNS 尚未能解析域名，普通域名访问仍需等待解析缓存刷新后验证。Client 使用的地址为 https://agentmen.cn。
+
+桌面 Demo 与 Relay 的接入、Generative Message 仍待开发。
