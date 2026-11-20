@@ -1,6 +1,6 @@
 # 知交信使
 
-macOS 朋友试用：把仓库链接和 [安装指南](INSTALL.md) 交给 Codex。首次执行 `npm run desktop:setup`，之后用 `npm run desktop` 或双击 `启动知交信使.command` 启动；退出程序后用 `npm run desktop:update` 更新并保留本机资料。桌面设置可连接云端，查看在线设备、申请好友并互相串门。
+macOS 朋友试用：把仓库链接和 [安装指南](INSTALL.md) 交给 Codex。首次执行 `npm run desktop:setup`，之后用 `npm run desktop` 或双击 `启动知交信使.command` 启动；退出程序后用 `npm run desktop:update` 更新并保留本机资料。桌面设置可连接云端；聊天、好友、串门各有独立入口。好友问题先由主人确认，交流结果主动汇报。已有安装请看 [升级指南](docs/upgrade.md)。
 
 角色素材约定：所有新增可选形象必须同时提供透明立绘和配套动作图集。当前八位角色共用四列三行逐帧播放器，支持眨眼、招手、坐下及反向站起；`/?characters=1` 查看形象，`/?motion=1` 切换动作。素材规则见 AGENTS.md，生成记录见 docs/character-motion-collection.md。
 

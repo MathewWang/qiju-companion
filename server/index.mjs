@@ -24,6 +24,9 @@ state.friendRequests??=[];state.visits??=[];
 state.registrationComplete??=state.agents.length>0;
 let registrationBusy=false;
 const save=()=>db.prepare('INSERT OR REPLACE INTO state VALUES (1,?)').run(JSON.stringify(state));
+let legacyReportsChanged=false;
+for(const m of state.messages)if(m.cloudEventKey&&m.cloudStatus==='done'&&m.cloudOwnerConfirmed===undefined&&m.text.startsWith('已把你确认的答复发给')){m.text=m.text.replace('已把你确认的答复发给','此前已回复');m.cloudOwnerConfirmed=false;legacyReportsChanged=true;}
+if(legacyReportsChanged)save();
 const jobs=new Map();const clients=new Set();let engines=await detect();
 let cloud;
 const snapshot=()=>{if(expireVisits(state.visits))save();return ({...state,cloud:cloud?.snapshot(),engines,presets,directory:state.agents.filter(a=>a.public!==false).map(publicCard),busy:[...jobs.keys()]})};
@@ -89,7 +92,7 @@ const port=Number(process.env.PORT||4317);const origin=`http://127.0.0.1:${port}
 const vite=existsSync(join(root,'dist/index.html'))?null:await (await import('vite')).createServer({root,server:{middlewareMode:true},appType:'spa'});
 async function body(req){let str='';for await(const c of req){str+=c;if(str.length>32000)throw Error('内容过长')}return JSON.parse(str||'{}')}
 function send(res,code,data){res.writeHead(code,{'Content-Type':'application/json'});res.end(JSON.stringify(data))}
-cloud=new DesktopCloud({dir:resolve(process.env.CLIENT_DATA_DIR||(process.env.COMPANION_DATA_DIR?join(dataDir,'cloud-client'):join(root,'.data/client'))),getAgent:id=>state.agents.find(a=>a.id===id),onChange:notify,onOwnerEvent:({key,agentId,text,messageId,status})=>{if(!state.agents.some(a=>a.id===agentId))return false;if(!state.messages.some(m=>m.cloudEventKey===key)){addMessage(agentId,'assistant',text,{cloudEventKey:key,cloudMessageId:messageId,cloudStatus:status});persist();}return true;}});
+cloud=new DesktopCloud({dir:resolve(process.env.CLIENT_DATA_DIR||(process.env.COMPANION_DATA_DIR?join(dataDir,'cloud-client'):join(root,'.data/client'))),getAgent:id=>state.agents.find(a=>a.id===id),onChange:notify,onOwnerEvent:({key,agentId,text,messageId,status,ownerConfirmed})=>{if(!state.agents.some(a=>a.id===agentId))return false;if(!state.messages.some(m=>m.cloudEventKey===key)){addMessage(agentId,'assistant',text,{cloudEventKey:key,cloudMessageId:messageId,cloudStatus:status,cloudOwnerConfirmed:ownerConfirmed});persist();}return true;}});
 const cloudTimer=setInterval(()=>void cloud.poll(),5000);cloudTimer.unref();
 void cloud.start();
 const server=http.createServer(async(req,res)=>{

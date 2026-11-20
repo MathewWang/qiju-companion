@@ -13,6 +13,7 @@ export class MessengerClient {
   this.db=new DatabaseSync(dbPath);this.db.exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
    CREATE TABLE IF NOT EXISTS inbox(id TEXT PRIMARY KEY, json TEXT NOT NULL, status TEXT NOT NULL, result TEXT, error TEXT);
    CREATE TABLE IF NOT EXISTS outbox(key TEXT PRIMARY KEY, json TEXT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0);`);
+  if(!this.db.prepare('PRAGMA table_info(inbox)').all().some(c=>c.name==='owner_confirmed'))this.db.exec('ALTER TABLE inbox ADD COLUMN owner_confirmed INTEGER NOT NULL DEFAULT 0');
   if(!this.db.prepare('PRAGMA table_info(outbox)').all().some(c=>c.name==='server_id'))this.db.exec('ALTER TABLE outbox ADD COLUMN server_id TEXT');
   // A crash during inference is ambiguous; never silently repeat a potentially billable call.
   if(recoverProcessing)this.db.prepare("UPDATE inbox SET status='waiting_owner',error='建议生成中断，请重新确认' WHERE status='drafting'").run();
@@ -83,7 +84,7 @@ export class MessengerClient {
   if(!row||JSON.parse(row.json).kind!=='question')throw Error('未找到待确认的好友问题');
   if(['ready','done'].includes(row.status)&&row.result===text){await this.deliverReady();return;}
   if(row.status!=='waiting_owner')throw Error('这条消息已处理或正在处理，请勿重复发送');
-  this.db.prepare("UPDATE inbox SET status='ready',result=?,error=NULL WHERE id=?").run(text,id);
+  this.db.prepare("UPDATE inbox SET status='ready',result=?,error=NULL,owner_confirmed=1 WHERE id=?").run(text,id);
   await this.deliverReady();
  }
  async retry(id,signal){

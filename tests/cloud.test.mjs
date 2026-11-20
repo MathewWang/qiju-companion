@@ -43,6 +43,8 @@ test('two desktops adopt identity, discover presence, approve friendship, visit,
   assert.equal(reportsB.length,2);assert.match(reportsB[1].text,/已把你确认的答复/);
   assert.equal(reportsA.length,1);assert.match(reportsA[0].text,/你好/);assert.match(reportsA[0].text,/收到啦/);
   await ca.poll();await ca.processing;await cb.poll();await cb.processing;assert.equal(reportsA.length,1);assert.equal(reportsB.length,2);
+  cb.client.db.prepare("INSERT INTO inbox(id,json,status,result) VALUES(?,?,'done',?)").run('legacy-auto',JSON.stringify({id:'legacy-auto',sender:device.id,kind:'question',text:'旧版提问'}),'旧版自动回答');
+  cb.refreshMessages();assert.match(reportsB.at(-1).text,/此前已回复/);assert.equal(reportsB.at(-1).ownerConfirmed,false);
   b.enabled=false;await cb.poll();await ca.poll();assert.equal(ca.snapshot().directory.find(d=>d.id===bid).online,false);
   const now=Date.now();relay.store.sync(bid,true,now);assert.equal(relay.store.sync(device.id,true,now+75001).directory.find(d=>d.id===bid).online,false);
  }finally{await ca.close();await cb.close();await new Promise(r=>relay.server.close(r));relay.store.close();rmSync(dir,{recursive:true,force:true});}

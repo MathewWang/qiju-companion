@@ -89,8 +89,8 @@ export class DesktopCloud {
     const sent=this.client.db.prepare('SELECT json FROM outbox WHERE server_id=?').get(m.reply_to||null);
     const question=sent?JSON.parse(sent.json).text:null;
     text=question?`你之前问${name}：“${question}”\n对方回复：“${m.text}”`:`${name}回复了：“${m.text}”`;
-   }else text=`已把你确认的答复发给${name}：“${row.result}”`;
-   if(this.onOwnerEvent({key,agentId:this.config.localAgentId,text,messageId:row.id,status:row.status})!==false)mark.run(key);
+   }else text=row.owner_confirmed?`已把你确认的答复发给${name}：“${row.result}”`:`此前已回复${name}：“${row.result}”`;
+   if(this.onOwnerEvent({key,agentId:this.config.localAgentId,text,messageId:row.id,status:row.status,ownerConfirmed:!!row.owner_confirmed})!==false)mark.run(key);
   }
  }
  async action(path,body){
