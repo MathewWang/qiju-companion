@@ -42,6 +42,8 @@ export function createRelay({dbPath,inviteToken}) {
     const device=store.register(body.name.trim(),token,profile);
     return send(201,{...device,token});
    }
+   if(req.method==='POST'&&path==='/v1/sync'){if(typeof body.online!=='boolean')throw Error('需要在线状态');return send(200,store.sync(actor.id,body.online));}
+   if(req.method==='POST'&&path==='/v1/profile'){if(body.publishProfile!==true)throw Error('公开名片需要明确授权');store.updateProfile(actor.id,normalizePublicProfile(body.profile));return send(200,{ok:true});}
    if(req.method==='GET'&&path==='/v1/visits')return send(200,store.visits(actor.id));
    if(req.method==='POST'&&path==='/v1/visits')return send(201,store.createVisit(actor.id,body));
    if(req.method==='POST'&&path==='/v1/visits/action')return send(200,store.actVisit(actor.id,body));

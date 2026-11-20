@@ -1,6 +1,6 @@
 # 知交信使
 
-macOS 朋友试用：把仓库链接和 [安装指南](INSTALL.md) 交给 Codex。首次执行 `npm run desktop:setup`，之后用 `npm run desktop` 或双击 `启动知交信使.command` 启动；退出程序后用 `npm run desktop:update` 更新并保留本机资料。当前桌面仍是本机 Demo，尚未接入云端。
+macOS 朋友试用：把仓库链接和 [安装指南](INSTALL.md) 交给 Codex。首次执行 `npm run desktop:setup`，之后用 `npm run desktop` 或双击 `启动知交信使.command` 启动；退出程序后用 `npm run desktop:update` 更新并保留本机资料。桌面设置可连接云端，查看在线设备、申请好友并互相串门。
 
 角色素材约定：所有新增可选形象必须同时提供透明立绘和配套动作图集。当前八位角色共用四列三行逐帧播放器，支持眨眼、招手、坐下及反向站起；`/?characters=1` 查看形象，`/?motion=1` 切换动作。素材规则见 AGENTS.md，生成记录见 docs/character-motion-collection.md。
 
@@ -14,9 +14,9 @@ macOS 朋友试用：把仓库链接和 [安装指南](INSTALL.md) 交给 Codex�
 
 完整配置、双设备体验和 ECS 部署步骤见 [无头 Client 指南](docs/headless-client.md)。
 
-新增「好友串门」口信版：好友敲门、手动请进、访客卡片、捎回回复、送客与召回。桌面本地体验与云端 CLI 使用相同状态规则，邀请 24 小时有效，接待最多 5 分钟；详见 [访客功能说明](docs/visits.md)。桌面与云端目前仍独立，新增接口尚未部署到 ECS。
+新增「好友串门」口信版：好友敲门、手动请进、访客卡片、捎回回复、送客与召回。桌面本地体验与云端 CLI 使用相同状态规则，邀请 24 小时有效，接待最多 5 分钟；详见 [访客功能说明](docs/visits.md)。桌面设置中的云端连接复用本机 Client 身份，在线状态由心跳判断。
 
-当前桌面界面仍是独立的本机 Demo，尚未接入新中转服务。以下保留原 Demo 使用说明。
+两台电脑的完整操作见 [安装指南](INSTALL.md#两台电脑连接云端)。以下保留原本机 Demo 使用说明。
 
 注册页已更新为单 Agent 流程：身份与名片 → 本地引擎 → 公开预览与创建。默认由主人审批好友，公开名片与一次真实模型连接验证分别征求确认。页面使用 `/api/register`，只创建一个本地 Agent；尚不创建云端账号或设备绑定。旧双角色批量接口仍兼容，下面的双角色体验说明及相关旧 UI 验收脚本属于历史 Demo 流程。
 

@@ -1,8 +1,10 @@
+import characters from './characters.json' with {type:'json'};
 // Only this explicit projection may cross the Relay boundary.
 export function normalizePublicProfile(input){
  if(!input||typeof input!=='object'||Array.isArray(input))throw Error('请填写公开名片');
- for(const key of Object.keys(input))if(!['name','publicBio'].includes(key))throw Error(`公开名片不允许包含字段：${key}`);
- return {name:text(input,'name',40,true),publicBio:text(input,'publicBio',300)};
+ for(const key of Object.keys(input))if(!['name','publicBio','skin'].includes(key))throw Error(`公开名片不允许包含字段：${key}`);
+ if(input.skin!==undefined&&!characters.some(c=>c.id===input.skin))throw Error('无效的角色形象');
+ return {name:text(input,'name',40,true),publicBio:text(input,'publicBio',300),...(input.skin?{skin:input.skin}:{})};
 }
 function text(input,key,max,required=false){
  const value=input[key]??'';

@@ -4,6 +4,7 @@ import {createVisit,actOnVisit,expireVisits} from '../shared/visits.mjs';
 export const hash = value => createHash('sha256').update(value).digest('hex');
 export class RelayStore {
  constructor(path) {
+  this.presence=new Map();
   this.db = new DatabaseSync(path);
   this.db.exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;
    CREATE TABLE IF NOT EXISTS devices(id TEXT PRIMARY KEY, token_hash TEXT UNIQUE NOT NULL, name TEXT NOT NULL, created_at INTEGER NOT NULL);
@@ -17,6 +18,13 @@ export class RelayStore {
  register(name, token, profile=null) { const id=randomUUID(); this.db.prepare('INSERT INTO devices(id,token_hash,name,created_at,profile_json) VALUES(?,?,?,?,?)').run(id,hash(token),name,Date.now(),profile?JSON.stringify(profile):null); return {id,name}; }
  authenticate(token) { return this.db.prepare('SELECT id,name FROM devices WHERE token_hash=?').get(hash(token)); }
  directory() { return this.db.prepare('SELECT id,name,profile_json FROM devices ORDER BY created_at').all().map(({profile_json,...device})=>profile_json?{...device,profile:JSON.parse(profile_json)}:device); }
+ updateProfile(id,profile){this.db.prepare('UPDATE devices SET profile_json=? WHERE id=?').run(JSON.stringify(profile),id);}
+ sync(id,online=true,now=Date.now()){
+  if(online)this.presence.set(id,now);else this.presence.delete(id);
+  const directory=this.directory().map(d=>({...d,online:this.presence.has(d.id)&&now-this.presence.get(d.id)<75000}));
+  const friends=this.db.prepare('SELECT a,b FROM friendships WHERE a=? OR b=?').all(id,id).map(r=>r.a===id?r.b:r.a);
+  return {directory,friends,requests:this.requests(id),visits:this.visits(id)};
+ }
  friends(a,b) { return !!this.db.prepare('SELECT 1 FROM friendships WHERE a=? AND b=?').get(...[a,b].sort()); }
  request(from,to) {
   if(from===to || !this.db.prepare('SELECT 1 FROM devices WHERE id=?').get(to)) throw Error('无效的接收设备');

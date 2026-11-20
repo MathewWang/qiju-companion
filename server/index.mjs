@@ -1,3 +1,4 @@
+import {DesktopCloud} from './cloud.mjs';
 import {createVisit,actOnVisit,expireVisits} from '../shared/visits.mjs';
 import http from 'node:http';
 import {parseDecision,socialInstructions} from './social.mjs';
@@ -24,7 +25,8 @@ state.registrationComplete??=state.agents.length>0;
 let registrationBusy=false;
 const save=()=>db.prepare('INSERT OR REPLACE INTO state VALUES (1,?)').run(JSON.stringify(state));
 const jobs=new Map();const clients=new Set();let engines=await detect();
-const snapshot=()=>{if(expireVisits(state.visits))save();return ({...state,engines,presets,directory:state.agents.filter(a=>a.public!==false).map(publicCard),busy:[...jobs.keys()]})};
+let cloud;
+const snapshot=()=>{if(expireVisits(state.visits))save();return ({...state,cloud:cloud?.snapshot(),engines,presets,directory:state.agents.filter(a=>a.public!==false).map(publicCard),busy:[...jobs.keys()]})};
 function notify(){for(const c of clients)c.write(`data: ${JSON.stringify(snapshot())}\n\n`)}
 function persist(){save();notify()}
 function addMessage(agentId,role,text,extra={}){const m={id:randomUUID(),agentId,role,text,createdAt:Date.now(),...extra};state.messages.push(m);return m}
@@ -77,6 +79,9 @@ const port=Number(process.env.PORT||4317);const origin=`http://127.0.0.1:${port}
 const vite=existsSync(join(root,'dist/index.html'))?null:await (await import('vite')).createServer({root,server:{middlewareMode:true},appType:'spa'});
 async function body(req){let str='';for await(const c of req){str+=c;if(str.length>32000)throw Error('内容过长')}return JSON.parse(str||'{}')}
 function send(res,code,data){res.writeHead(code,{'Content-Type':'application/json'});res.end(JSON.stringify(data))}
+cloud=new DesktopCloud({dir:resolve(process.env.CLIENT_DATA_DIR||join(root,'.data/client')),getAgent:id=>state.agents.find(a=>a.id===id),onChange:notify});
+const cloudTimer=setInterval(()=>void cloud.poll(),5000);cloudTimer.unref();
+void cloud.start();
 const server=http.createServer(async(req,res)=>{
  const url=new URL(req.url,origin);
  if(req.headers.host!==`127.0.0.1:${port}`&&req.headers.host!==`localhost:${port}`){return send(res,403,{error:'仅允许本机访问'})}
@@ -89,6 +94,8 @@ const server=http.createServer(async(req,res)=>{
  if(url.pathname==='/api/events'){res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache','Connection':'keep-alive'});clients.add(res);res.write(`data: ${JSON.stringify(snapshot())}\n\n`);req.on('close',()=>clients.delete(res));return;}
  if(req.method!=='POST')return send(res,405,{error:'不支持的方法'});
  const b=await body(req);const p=url.pathname;
+ if(p==='/api/cloud/connect'){await cloud.connect(b);return send(res,200,{ok:true});}
+ if(p.startsWith('/api/cloud/')){await cloud.action(p.slice('/api/cloud/'.length),b);return send(res,200,{ok:true});}
  if(p==='/api/register'||p==='/api/register-batch'){
  if(state.registrationComplete||state.agents.length)throw Error('当前空间已注册完成');
  if(registrationBusy)throw Error('正在登记，请稍候');
@@ -148,6 +155,6 @@ const server=http.createServer(async(req,res)=>{
 });
 server.listen(port,'127.0.0.1',()=>{console.log(`Companion ready: ${origin}`);for(const a of state.agents){processInvites(a.id);drain(a.id)}});
 setInterval(()=>{for(const c of clients)c.write(': keepalive\n\n')},20000).unref();
-for(const sig of ['SIGTERM','SIGINT'])process.on(sig,()=>{for(const c of jobs.values())c.abort();server.close();process.exit()});
+for(const sig of ['SIGTERM','SIGINT'])process.on(sig,async()=>{clearInterval(cloudTimer);for(const c of jobs.values())c.abort();server.close();await cloud.close();db.close();process.exit()});
 
 const visitExpiry=setInterval(()=>{if(expireVisits(state.visits))persist()},5000);visitExpiry.unref();
