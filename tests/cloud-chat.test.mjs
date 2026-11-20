@@ -28,9 +28,9 @@ test('owner chat uses current cloud directory and dispatches friend requests thr
   assert.equal(state.cloud.messages[0].status,'waiting_owner');assert.equal(state.messages.filter(m=>m.cloudStatus==='waiting_owner').length,1);
   const id=state.cloud.messages[0].id;
   await post('owner-reply',{id,text:'明天下午两点见。'});
-  state=await(await fetch(url+'/api/state')).json();assert.equal(state.messages.filter(m=>m.cloudStatus==='done').length,1);assert.match(state.messages.at(-1).text,/明天下午两点见/);
+  state=await(await fetch(url+'/api/state')).json();assert.equal(state.messages.filter(m=>m.cloudStatus==='done'&&m.cloudReportKind==='receipt').length,1);assert.match(state.messages.at(-1).text,/明天下午两点见/);assert.ok(state.messages.some(m=>m.role==='user'&&m.text.includes('明天下午两点见')));assert.equal(state.messages.find(m=>m.cloudReportKind==='receipt').channel,'agent-detail');
   await post('owner-reply',{id,text:'明天下午两点见。'});
-  state=await(await fetch(url+'/api/state')).json();assert.equal(state.messages.filter(m=>m.cloudStatus==='done').length,1,'owner report persisted exactly once');
+  state=await(await fetch(url+'/api/state')).json();assert.equal(state.messages.filter(m=>m.cloudStatus==='done'&&m.cloudReportKind==='receipt').length,1,'owner report persisted exactly once');
 
  }finally{const done=new Promise(r=>child.once('exit',r));child.kill();await done;await new Promise(r=>relay.server.close(r));relay.store.close();rmSync(dir,{recursive:true,force:true});}
 });

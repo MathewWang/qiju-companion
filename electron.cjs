@@ -1,9 +1,9 @@
 const {app,BrowserWindow,ipcMain,screen,Tray,Menu,nativeImage,shell}=require('electron');
 const {spawn}=require('node:child_process');
 const path=require('node:path');
-const {expandedBounds}=require('./window-placement.cjs');
+const {expandedBounds,characterCenter,conversationPlacement}=require('./window-placement.cjs');
 let service,tray,setup,quitting=false;
-const pets=new Map(),histories=new Map();
+const pets=new Map(),histories=new Map(),placements=new Map();
 const url='http://127.0.0.1:4317';
 const preferences={preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false};
 async function ready(){for(let i=0;i<80;i++){try{const r=await fetch(url+'/api/state');if(r.ok)return}catch{}await new Promise(r=>setTimeout(r,250))}throw Error('本地服务启动超时')}
@@ -28,7 +28,17 @@ function createPets(agents){
   const gap=Math.min(640,Math.max(250,(work.width-260)/Math.max(1,agents.length-1)));
   const canvas=expandedBounds({x:work.x+work.width-260-index*gap,y:work.y+work.height-335,width:240,height:320},work);
   const pet=new BrowserWindow({...canvas,title:a.name+' · 知交信使',transparent:true,backgroundColor:'#00000000',frame:false,hasShadow:false,resizable:false,alwaysOnTop:true,skipTaskbar:true,webPreferences:preferences});
-  pets.set(a.id,pet);pet.loadURL(url+'/?agent='+encodeURIComponent(a.id));
+  pets.set(a.id,pet);placements.set(pet,'left');pet.loadURL(url+'/?agent='+encodeURIComponent(a.id)+'&panel=left');
+  let placementTimer;
+  pet.on('move',()=>{clearTimeout(placementTimer);placementTimer=setTimeout(()=>{
+   if(pet.isDestroyed())return;
+   const previous=placements.get(pet)||'left';const bounds=pet.getBounds();
+   const work=screen.getDisplayNearestPoint(characterCenter(bounds,previous)).workArea;
+   const next=conversationPlacement(bounds,previous,work);
+   placements.set(pet,next.side);
+   if(next.side!==previous){pet.setBounds(next.bounds);pet.webContents.send('panel-placement',next.side);}
+  },160);});
+  pet.on('closed',()=>{clearTimeout(placementTimer);placements.delete(pet)});
   pet.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   pet.on('closed',()=>pets.delete(a.id));
  });
@@ -47,6 +57,7 @@ app.whenReady().then(async()=>{
  }else createPets(state.agents);
  ipcMain.handle('open-visit-link',async(_event,value)=>{if(typeof value!=='string'||value.length>2000)throw Error('Invalid link');const target=new URL(value);if(target.protocol!=='https:'||target.username||target.password)throw Error('Only HTTPS links are supported');await shell.openExternal(target.href)});
  ipcMain.handle('finish-registration',async()=>{const current=await (await fetch(url+'/api/state')).json();if(!current.registrationComplete)throw Error('请先完成注册');createPets(current.agents);setup?.close()});
+ ipcMain.handle('panel-placement',e=>placements.get(BrowserWindow.fromWebContents(e.sender))||'left');
  ipcMain.on('open-history',(_e,id)=>openHistory(id));
  ipcMain.on('hide-history',e=>BrowserWindow.fromWebContents(e.sender)?.hide());
  ipcMain.on('pointer-through',(e,value)=>{const win=BrowserWindow.fromWebContents(e.sender);if([...pets.values()].includes(win))win.setIgnoreMouseEvents(value===true,{forward:true})});

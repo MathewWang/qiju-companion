@@ -26,6 +26,7 @@ let registrationBusy=false;
 const save=()=>db.prepare('INSERT OR REPLACE INTO state VALUES (1,?)').run(JSON.stringify(state));
 let legacyReportsChanged=false;
 for(const m of state.messages)if(m.cloudEventKey&&m.cloudStatus==='done'&&m.cloudOwnerConfirmed===undefined&&m.text.startsWith('已把你确认的答复发给')){m.text=m.text.replace('已把你确认的答复发给','此前已回复');m.cloudOwnerConfirmed=false;legacyReportsChanged=true;}
+for(const m of state.messages)if(m.cloudEventKey&&m.cloudStatus==='done'&&(m.text.startsWith('此前已回复')||m.text.startsWith('已把你确认的答复发给'))&&!m.channel){m.channel='agent-detail';legacyReportsChanged=true;}
 if(legacyReportsChanged)save();
 const jobs=new Map();const clients=new Set();let engines=await detect();
 let cloud;
@@ -70,7 +71,7 @@ async function execute(a,message,kind='chat',source='主人',incoming,pendingMes
  const result=await runAgent({agent:a,history,message:input,source,dataDir,signal:controller.signal,instructions:kind==='chat'?socialInstructions(contacts,directory,requests)+cloudContext:''});
  let text=result;
  if(kind==='chat'){const decision=parseDecision(result,contacts,directory);text=decision.reply;if(cloudBound&&decision.requestFriend){await cloud.action('request',{to:decision.requestFriend.to});text='云端好友申请已发出，等待对方同意。';}
- else if(cloudBound&&decision.sendMessage){await cloud.action('message',decision.sendMessage);text='消息已投递到云端，对方回复后可在设置中的云端消息里查看。';}
+ else if(cloudBound&&decision.sendMessage){await cloud.action('message',{...decision.sendMessage,ownerTurn:true});text='我已经替你问了，收到回复就向你汇报。';}
  else if(decision.requestFriend){const target=agentBy(decision.requestFriend.to);const result=invite(a.id,target.id);text=result.alreadyFriends?`已经和${target.ownerName}建立联系，你可以直接问我问题。`:`找到${target.ownerName}的公开名片了，好友申请已发出，正在等待对方同意。`; }if(!cloudBound&&decision.sendMessage){const target=agentBy(decision.sendMessage.to);const correlation=userMessage.id;
  if(!state.messages.some(m=>m.delegationId===correlation)){addMessage(a.id,'assistant',decision.sendMessage.text,{channel:'friend',peerId:target.id,delegationId:correlation});addMessage(target.id,'friend',decision.sendMessage.text,{channel:'friend',peerId:a.id,source:a.name,status:'queued',delegationId:correlation});}
  text=`我已经帮你向${target.ownerName||target.name}那边问了。${target.enabled?'有回复就告诉你。':'对方暂时不在线，消息已留下，收到回复后告诉你。'}`;persist();drain(target.id);}}
@@ -92,7 +93,7 @@ const port=Number(process.env.PORT||4317);const origin=`http://127.0.0.1:${port}
 const vite=existsSync(join(root,'dist/index.html'))?null:await (await import('vite')).createServer({root,server:{middlewareMode:true},appType:'spa'});
 async function body(req){let str='';for await(const c of req){str+=c;if(str.length>32000)throw Error('内容过长')}return JSON.parse(str||'{}')}
 function send(res,code,data){res.writeHead(code,{'Content-Type':'application/json'});res.end(JSON.stringify(data))}
-cloud=new DesktopCloud({dir:resolve(process.env.CLIENT_DATA_DIR||(process.env.COMPANION_DATA_DIR?join(dataDir,'cloud-client'):join(root,'.data/client'))),getAgent:id=>state.agents.find(a=>a.id===id),onChange:notify,onOwnerEvent:({key,agentId,text,messageId,status,ownerConfirmed})=>{if(!state.agents.some(a=>a.id===agentId))return false;if(!state.messages.some(m=>m.cloudEventKey===key)){addMessage(agentId,'assistant',text,{cloudEventKey:key,cloudMessageId:messageId,cloudStatus:status,cloudOwnerConfirmed:ownerConfirmed});persist();}return true;}});
+cloud=new DesktopCloud({dir:resolve(process.env.CLIENT_DATA_DIR||(process.env.COMPANION_DATA_DIR?join(dataDir,'cloud-client'):join(root,'.data/client'))),getAgent:id=>state.agents.find(a=>a.id===id),onChange:notify,onOwnerEvent:({key,agentId,text,messageId,status,ownerConfirmed,role='assistant',reportKind})=>{if(!state.agents.some(a=>a.id===agentId))return false;if(!state.messages.some(m=>m.cloudEventKey===key)){addMessage(agentId,role,text,{status:'done',...(reportKind==='receipt'?{channel:'agent-detail'}:{}),cloudReportKind:reportKind,cloudEventKey:key,cloudMessageId:messageId,cloudStatus:status,cloudOwnerConfirmed:ownerConfirmed});persist();}return true;}});
 const cloudTimer=setInterval(()=>void cloud.poll(),5000);cloudTimer.unref();
 void cloud.start();
 const server=http.createServer(async(req,res)=>{

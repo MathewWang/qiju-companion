@@ -14,8 +14,8 @@ test('two desktops adopt identity, discover presence, approve friendship, visit,
  const device=relay.store.register('电脑A','existing-token');
  writeFileSync(join(adir,'config.json'),JSON.stringify({...device,token:'existing-token',relay:url,agent:{...a,publishProfile:true}}));
  let calls=0;const reportsA=[],reportsB=[];
- const ca=new DesktopCloud({dir:adir,getAgent:id=>id===a.id?a:null,onOwnerEvent:e=>reportsA.push(e),agentRunner:async()=>{calls++;return '收到啦';}});
- let cb=new DesktopCloud({dir:join(dir,'b'),getAgent:id=>id===b.id?b:null,onOwnerEvent:e=>reportsB.push(e),agentRunner:async()=>{calls++;return '收到啦';}});
+ const ca=new DesktopCloud({dir:adir,getAgent:id=>id===a.id?a:null,onOwnerEvent:e=>{if(e.role!=='user')reportsA.push(e)},agentRunner:async()=>{calls++;return '收到啦';}});
+ let cb=new DesktopCloud({dir:join(dir,'b'),getAgent:id=>id===b.id?b:null,onOwnerEvent:e=>{if(e.role!=='user')reportsB.push(e)},agentRunner:async()=>{calls++;return '收到啦';}});
  try{
   await assert.rejects(()=>ca.connect({agentId:a.id,relay:url,publishProfile:false}),/公开/);
   await ca.connect({agentId:a.id,relay:url,publishProfile:true});assert.equal(ca.snapshot().deviceId,device.id);
@@ -34,14 +34,14 @@ test('two desktops adopt identity, discover presence, approve friendship, visit,
   await ca.action('message',{to:bid,text:'你好'});await ca.processing;await cb.processing;await cb.poll();await cb.processing;
   assert.equal(calls,0);assert.equal(cb.snapshot().messages[0].status,'waiting_owner');
   assert.equal(reportsB.length,1);await cb.close();
-  cb=new DesktopCloud({dir:join(dir,'b'),getAgent:id=>id===b.id?b:null,onOwnerEvent:e=>reportsB.push(e),agentRunner:async()=>{calls++;return '收到啦';}});await cb.start();await cb.processing;
+  cb=new DesktopCloud({dir:join(dir,'b'),getAgent:id=>id===b.id?b:null,onOwnerEvent:e=>{if(e.role!=='user')reportsB.push(e)},agentRunner:async()=>{calls++;return '收到啦';}});await cb.start();await cb.processing;
   assert.equal(cb.snapshot().messages[0].status,'waiting_owner');assert.equal(reportsB.length,1,'restart does not duplicate owner prompt');
   await cb.action('draft',{id:cb.snapshot().messages[0].id});assert.equal(calls,1);assert.equal(cb.snapshot().messages[0].status,'waiting_owner');
   await ca.poll();await ca.processing;assert.equal(ca.snapshot().messages.length,0,'draft does not send');
   await cb.action('owner-reply',{id:cb.snapshot().messages[0].id,text:'收到啦'});
   await ca.poll();await ca.processing;assert.equal(calls,1);assert.equal(ca.snapshot().messages[0].message.text,'收到啦');
   assert.equal(reportsB.length,2);assert.match(reportsB[1].text,/已把你确认的答复/);
-  assert.equal(reportsA.length,1);assert.match(reportsA[0].text,/你好/);assert.match(reportsA[0].text,/收到啦/);
+  assert.equal(reportsA.length,1);assert.match(reportsA[0].text,/有回复了/);assert.match(reportsA[0].text,/收到啦/);
   await ca.poll();await ca.processing;await cb.poll();await cb.processing;assert.equal(reportsA.length,1);assert.equal(reportsB.length,2);
   cb.client.db.prepare("INSERT INTO inbox(id,json,status,result) VALUES(?,?,'done',?)").run('legacy-auto',JSON.stringify({id:'legacy-auto',sender:device.id,kind:'question',text:'旧版提问'}),'旧版自动回答');
   cb.refreshMessages();assert.match(reportsB.at(-1).text,/此前已回复/);assert.equal(reportsB.at(-1).ownerConfirmed,false);

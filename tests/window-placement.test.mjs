@@ -2,3 +2,11 @@ import test from 'node:test';import assert from 'node:assert/strict';import plac
 const work={x:0,y:0,width:1440,height:900};
 test('opening from resting right corner moves character left while retaining right/bottom edge',()=>{const home={x:1180,y:565,width:240,height:320};const open=placement.expandedBounds(home,work);assert.deepEqual(open,{x:800,y:345,width:620,height:540});assert.equal(open.x+open.width,home.x+home.width);assert.deepEqual(placement.clampBounds(home,work),home)});
 test('placement remains on negative-origin and small monitors',()=>{const w={x:-800,y:100,width:500,height:450};const result=placement.expandedBounds({x:-550,y:300,width:240,height:320},w);assert.deepEqual(result,{x:-800,y:100,width:500,height:450})});
+test('conversation opens inward and keeps the character fixed when crossing the display midpoint',()=>{
+ const right={x:800,y:345,width:620,height:540};
+ assert.equal(placement.conversationPlacement(right,'left',work).side,'left');
+ const left={x:0,y:200,width:620,height:540};const center=placement.characterCenter(left,'left');
+ const switched=placement.conversationPlacement(left,'left',work);assert.equal(switched.side,'right');assert.deepEqual(placement.characterCenter(switched.bounds,'right'),center);
+ assert.equal(switched.bounds.height,left.height);assert.equal(switched.bounds.width,left.width);
+ const other={x:-1920,y:0,width:1920,height:1080};const b={x:-1900,y:200,width:620,height:540};assert.equal(placement.conversationPlacement(b,'right',other).side,'right');
+});

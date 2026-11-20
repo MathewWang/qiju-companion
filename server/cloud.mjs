@@ -83,14 +83,12 @@ export class DesktopCloud {
    const key=`${this.config.id}:${row.id}:${row.status}`;if(has.get(key))continue;
    const m=JSON.parse(row.json);const peer=this.state.directory.find(d=>d.id===m.sender);const name=peer?.profile?.name||peer?.name||'好友';
    let text;
-   if(row.status==='waiting_owner')text=`${name}来问：“${m.text}”\n需要你确认分享什么。请在待确认卡片里填写答复，确认后我再发给对方。`;
+   if(row.status==='waiting_owner')text=`${name}有个问题需要你确认。我会等你决定如何答复。`;
    else if(row.status==='failed')text=`处理${name}的消息失败：${row.error||'原因未知'}。没有自动重试，请检查后再处理。`;
    else if(m.kind==='reply'){
-    const sent=this.client.db.prepare('SELECT json FROM outbox WHERE server_id=?').get(m.reply_to||null);
-    const question=sent?JSON.parse(sent.json).text:null;
-    text=question?`你之前问${name}：“${question}”\n对方回复：“${m.text}”`:`${name}回复了：“${m.text}”`;
+    text=`${name}那边有回复了。对方表示：${m.text}`;
    }else text=row.owner_confirmed?`已把你确认的答复发给${name}：“${row.result}”`:`此前已回复${name}：“${row.result}”`;
-   if(this.onOwnerEvent({key,agentId:this.config.localAgentId,text,messageId:row.id,status:row.status,ownerConfirmed:!!row.owner_confirmed})!==false)mark.run(key);
+   if(this.onOwnerEvent({key,agentId:this.config.localAgentId,text,messageId:row.id,status:row.status,ownerConfirmed:!!row.owner_confirmed,reportKind:row.status==='waiting_owner'?'confirmation':row.status==='failed'?'failure':m.kind==='reply'?'reply':'receipt'})!==false)mark.run(key);
   }
  }
  async action(path,body){
@@ -102,10 +100,18 @@ export class DesktopCloud {
     this.config.agent=normalizeAgent({...agent,publishProfile:true});
     const task=this.client.draft(body.id,this.abort.signal);this.refreshMessages();
     try{await task;}finally{this.refreshMessages();}
-   }else{try{await this.client.ownerReply(body.id,path==='owner-decline'?'主人暂不提供这项信息。':body.text);}finally{this.refreshMessages();}}
+   }else{
+    const row=this.client.db.prepare('SELECT json FROM inbox WHERE id=?').get(body.id);
+    const sender=row?JSON.parse(row.json).sender:null;
+    const peer=this.state.directory.find(d=>d.id===sender);
+    const reply=path==='owner-decline'?'主人暂不提供这项信息。':body.text;
+    try{await this.client.ownerReply(body.id,reply);this.onOwnerEvent?.({key:`${this.config.id}:${body.id}:owner-answer`,agentId:this.config.localAgentId,role:'user',reportKind:'owner',text:`请这样回复${peer?.profile?.name||peer?.name||'对方'}：${reply}`});}finally{this.refreshMessages();}}
   }else if(path==='message'){
    const agent=this.getAgent(this.config.localAgentId);if(!agent?.enabled)throw Error('请先让助理上线');
-   this.client.queue(body.to,body.text);await this.client.flush();
+   const key=this.client.queue(body.to,body.text);
+   const peer=this.state.directory.find(d=>d.id===body.to);
+   if(!body.ownerTurn)this.onOwnerEvent?.({key:`${this.config.id}:outgoing:${key}`,agentId:this.config.localAgentId,role:'user',reportKind:'owner',text:`帮我问${peer?.profile?.name||peer?.name||'对方'}：${body.text}`});
+   await this.client.flush();
   }else{
    if(!routes[path])throw Error('未知云端操作');await this.client.api(routes[path],body);
   }
