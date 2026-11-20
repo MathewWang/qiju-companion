@@ -20,5 +20,17 @@ test('owner chat uses current cloud directory and dispatches friend requests thr
   for(let i=0;i<100;i++){state=await(await fetch(url+'/api/state')).json();if(!state.busy.length)break;await delay(30)}
   const prompt=readFileSync(capture,'utf8');assert.match(prompt,/在线 Agent 数 2/);assert.match(prompt,/小白/);
   assert.equal(relay.store.requests(b.id)[0].sender,a.id);assert.match(state.messages.at(-1).text,/云端好友申请已发出/);
+  relay.store.decide(b.id,relay.store.requests(b.id)[0].id,true);
+  relay.store.send(b.id,{to:a.id,key:'owner-question',kind:'question',text:'明天几点见？'});
+  const post=async(route,body)=>{const r=await fetch(url+'/api/cloud/'+route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});assert.equal(r.status,200,await r.text());};
+  await post('request',{to:b.id});
+  for(let i=0;i<100;i++){state=await(await fetch(url+'/api/state')).json();if(state.cloud.messages[0]?.status==='waiting_owner'&&state.messages.some(m=>m.cloudStatus==='waiting_owner'))break;await delay(20);}
+  assert.equal(state.cloud.messages[0].status,'waiting_owner');assert.equal(state.messages.filter(m=>m.cloudStatus==='waiting_owner').length,1);
+  const id=state.cloud.messages[0].id;
+  await post('owner-reply',{id,text:'明天下午两点见。'});
+  state=await(await fetch(url+'/api/state')).json();assert.equal(state.messages.filter(m=>m.cloudStatus==='done').length,1);assert.match(state.messages.at(-1).text,/明天下午两点见/);
+  await post('owner-reply',{id,text:'明天下午两点见。'});
+  state=await(await fetch(url+'/api/state')).json();assert.equal(state.messages.filter(m=>m.cloudStatus==='done').length,1,'owner report persisted exactly once');
+
  }finally{const done=new Promise(r=>child.once('exit',r));child.kill();await done;await new Promise(r=>relay.server.close(r));relay.store.close();rmSync(dir,{recursive:true,force:true});}
 });

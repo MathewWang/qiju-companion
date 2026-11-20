@@ -13,9 +13,9 @@ test('two desktops adopt identity, discover presence, approve friendship, visit,
  const a=agent('桃桃'),b=agent('小白');const adir=join(dir,'a');mkdirSync(adir);
  const device=relay.store.register('电脑A','existing-token');
  writeFileSync(join(adir,'config.json'),JSON.stringify({...device,token:'existing-token',relay:url,agent:{...a,publishProfile:true}}));
- let calls=0;
- const ca=new DesktopCloud({dir:adir,getAgent:id=>id===a.id?a:null,agentRunner:async()=>{calls++;return '收到啦';}});
- const cb=new DesktopCloud({dir:join(dir,'b'),getAgent:id=>id===b.id?b:null,agentRunner:async()=>{calls++;return '收到啦';}});
+ let calls=0;const reportsA=[],reportsB=[];
+ const ca=new DesktopCloud({dir:adir,getAgent:id=>id===a.id?a:null,onOwnerEvent:e=>reportsA.push(e),agentRunner:async()=>{calls++;return '收到啦';}});
+ let cb=new DesktopCloud({dir:join(dir,'b'),getAgent:id=>id===b.id?b:null,onOwnerEvent:e=>reportsB.push(e),agentRunner:async()=>{calls++;return '收到啦';}});
  try{
   await assert.rejects(()=>ca.connect({agentId:a.id,relay:url,publishProfile:false}),/公开/);
   await ca.connect({agentId:a.id,relay:url,publishProfile:true});assert.equal(ca.snapshot().deviceId,device.id);
@@ -32,7 +32,17 @@ test('two desktops adopt identity, discover presence, approve friendship, visit,
   assert.equal(calls,0,'visits do not invoke models');
   await cb.action('visit-action',{id:visit.id,action:'end',reply:'下次见'});await ca.poll();assert.equal(ca.snapshot().visits[0].reply,'下次见');
   await ca.action('message',{to:bid,text:'你好'});await ca.processing;await cb.processing;await cb.poll();await cb.processing;
+  assert.equal(calls,0);assert.equal(cb.snapshot().messages[0].status,'waiting_owner');
+  assert.equal(reportsB.length,1);await cb.close();
+  cb=new DesktopCloud({dir:join(dir,'b'),getAgent:id=>id===b.id?b:null,onOwnerEvent:e=>reportsB.push(e),agentRunner:async()=>{calls++;return '收到啦';}});await cb.start();await cb.processing;
+  assert.equal(cb.snapshot().messages[0].status,'waiting_owner');assert.equal(reportsB.length,1,'restart does not duplicate owner prompt');
+  await cb.action('draft',{id:cb.snapshot().messages[0].id});assert.equal(calls,1);assert.equal(cb.snapshot().messages[0].status,'waiting_owner');
+  await ca.poll();await ca.processing;assert.equal(ca.snapshot().messages.length,0,'draft does not send');
+  await cb.action('owner-reply',{id:cb.snapshot().messages[0].id,text:'收到啦'});
   await ca.poll();await ca.processing;assert.equal(calls,1);assert.equal(ca.snapshot().messages[0].message.text,'收到啦');
+  assert.equal(reportsB.length,2);assert.match(reportsB[1].text,/已把你确认的答复/);
+  assert.equal(reportsA.length,1);assert.match(reportsA[0].text,/你好/);assert.match(reportsA[0].text,/收到啦/);
+  await ca.poll();await ca.processing;await cb.poll();await cb.processing;assert.equal(reportsA.length,1);assert.equal(reportsB.length,2);
   b.enabled=false;await cb.poll();await ca.poll();assert.equal(ca.snapshot().directory.find(d=>d.id===bid).online,false);
   const now=Date.now();relay.store.sync(bid,true,now);assert.equal(relay.store.sync(device.id,true,now+75001).directory.find(d=>d.id===bid).online,false);
  }finally{await ca.close();await cb.close();await new Promise(r=>relay.server.close(r));relay.store.close();rmSync(dir,{recursive:true,force:true});}

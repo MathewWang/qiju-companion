@@ -5,8 +5,8 @@ import {normalizeAgent,normalizePublicProfile} from '../shared/agent-profile.mjs
 
 // Credentials stay on the loopback server. Renderers receive only this public snapshot.
 export class DesktopCloud {
- constructor({dir,getAgent,onChange=()=>{},agentRunner}){
-  this.dir=dir;this.getAgent=getAgent;this.onChange=onChange;this.agentRunner=agentRunner;
+ constructor({dir,getAgent,onChange=()=>{},onOwnerEvent,agentRunner}){
+  this.onOwnerEvent=onOwnerEvent;this.dir=dir;this.getAgent=getAgent;this.onChange=onChange;this.agentRunner=agentRunner;
   mkdirSync(dir,{recursive:true,mode:0o700});this.path=join(dir,'config.json');this.lock=join(dir,'client.lock');
   this.state={registered:false,connected:false,directory:[],friends:[],requests:[],visits:[],messages:[]};
   this.abort=new AbortController();this.closed=false;
@@ -37,7 +37,7 @@ export class DesktopCloud {
     this.config={relay:url,...d,agent:local};this.save();
    }
    this.config.localAgentId=agentId;this.config.agent=local;this.save();
-   this.client=new MessengerClient({config:this.config,dbPath:join(this.dir,'client.sqlite'),dataDir:this.dir,agentRunner:this.agentRunner});
+   this.client=new MessengerClient({config:this.config,dbPath:join(this.dir,'client.sqlite'),dataDir:this.dir,agentRunner:this.agentRunner,requireOwnerApproval:true});
    this.publish({registered:true,deviceId:this.config.id,agentId});
    await this.client.api('/v1/profile',{profile:this.profile(agent),publishProfile:true});
    this.profileJSON=JSON.stringify(this.profile(agent));
@@ -50,7 +50,7 @@ export class DesktopCloud {
   if(!this.config||this.client||this.closed)return;
   try{
    this.fd=openSync(this.lock,'wx',0o600);
-   this.client=new MessengerClient({config:this.config,dbPath:join(this.dir,'client.sqlite'),dataDir:this.dir,agentRunner:this.agentRunner});
+   this.client=new MessengerClient({config:this.config,dbPath:join(this.dir,'client.sqlite'),dataDir:this.dir,agentRunner:this.agentRunner,requireOwnerApproval:true});
   }catch(e){this.publish({error:e.code==='EEXIST'?'Client 数据目录被其他进程占用':e.message});return;}
   await this.poll();
  }
@@ -70,13 +70,40 @@ export class DesktopCloud {
   }catch(e){this.publish({connected:false,error:e.message});}finally{this.polling=false;}
  }
  refreshMessages(){
-  const incoming=this.client.db.prepare('SELECT id,json,status,error,result FROM inbox ORDER BY rowid DESC LIMIT 50').all().map(r=>({...r,message:JSON.parse(r.json),json:undefined}));
+  const incoming=this.client.db.prepare("SELECT id,json,status,error,result FROM inbox WHERE status IN ('waiting_owner','drafting','ready') OR rowid IN (SELECT rowid FROM inbox ORDER BY rowid DESC LIMIT 50) ORDER BY rowid DESC").all().map(r=>({...r,message:JSON.parse(r.json),json:undefined}));
   this.publish({messages:incoming});
+  this.reportOwner();
+ }
+ reportOwner(){
+  if(!this.onOwnerEvent)return;
+  this.client.db.exec('CREATE TABLE IF NOT EXISTS desktop_reports(key TEXT PRIMARY KEY)');
+  const has=this.client.db.prepare('SELECT 1 FROM desktop_reports WHERE key=?');
+  const mark=this.client.db.prepare('INSERT OR IGNORE INTO desktop_reports(key) VALUES(?)');
+  for(const row of this.client.db.prepare("SELECT * FROM inbox WHERE status IN ('waiting_owner','done','failed') ORDER BY rowid").all()){
+   const key=`${this.config.id}:${row.id}:${row.status}`;if(has.get(key))continue;
+   const m=JSON.parse(row.json);const peer=this.state.directory.find(d=>d.id===m.sender);const name=peer?.profile?.name||peer?.name||'好友';
+   let text;
+   if(row.status==='waiting_owner')text=`${name}来问：“${m.text}”\n需要你确认分享什么。请在待确认卡片里填写答复，确认后我再发给对方。`;
+   else if(row.status==='failed')text=`处理${name}的消息失败：${row.error||'原因未知'}。没有自动重试，请检查后再处理。`;
+   else if(m.kind==='reply'){
+    const sent=this.client.db.prepare('SELECT json FROM outbox WHERE server_id=?').get(m.reply_to||null);
+    const question=sent?JSON.parse(sent.json).text:null;
+    text=question?`你之前问${name}：“${question}”\n对方回复：“${m.text}”`:`${name}回复了：“${m.text}”`;
+   }else text=`已把你确认的答复发给${name}：“${row.result}”`;
+   if(this.onOwnerEvent({key,agentId:this.config.localAgentId,text,messageId:row.id,status:row.status})!==false)mark.run(key);
+  }
  }
  async action(path,body){
   if(!this.client)throw Error('请先连接云端');
   const routes={request:'/v1/requests',decision:'/v1/requests/decision',visit:'/v1/visits','visit-action':'/v1/visits/action'};
-  if(path==='message'){
+  if(['owner-reply','owner-decline','draft'].includes(path)){
+   const agent=this.getAgent(this.config.localAgentId);if(!agent?.enabled)throw Error('请先让助理上线');
+   if(path==='draft'){
+    this.config.agent=normalizeAgent({...agent,publishProfile:true});
+    const task=this.client.draft(body.id,this.abort.signal);this.refreshMessages();
+    try{await task;}finally{this.refreshMessages();}
+   }else{try{await this.client.ownerReply(body.id,path==='owner-decline'?'主人暂不提供这项信息。':body.text);}finally{this.refreshMessages();}}
+  }else if(path==='message'){
    const agent=this.getAgent(this.config.localAgentId);if(!agent?.enabled)throw Error('请先让助理上线');
    this.client.queue(body.to,body.text);await this.client.flush();
   }else{
