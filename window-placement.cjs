@@ -22,3 +22,9 @@ function conversationPlacement(bounds,currentSide,work){
 }
 module.exports.characterCenter=characterCenter;
 module.exports.conversationPlacement=conversationPlacement;
+function visitorBounds(host,side,work){
+ const center=characterCenter(host,side);const width=Math.min(330,work.width),height=Math.min(500,work.height);
+ const x=center.x<work.x+work.width/2?center.x+125:center.x-125-width;
+ return clampBounds({x,y:host.y+host.height-height,width,height},work);
+}
+module.exports.visitorBounds=visitorBounds;
