@@ -1,6 +1,6 @@
 import {DatabaseSync} from 'node:sqlite';
 import {randomUUID} from 'node:crypto';
-import {runAgent} from '../server/adapters.mjs';
+import {runAgent} from '../runtime/adapters.mjs';
 export function validateRelayURL(value){
  const u=new URL(value);
  if(u.username||u.password||u.search||u.hash||u.pathname!=='/')throw Error('Relay 地址只能包含协议、主机和端口');

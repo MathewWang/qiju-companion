@@ -1,5 +1,7 @@
 # 知交信使
 
+客户端已拆分为 MIT 开源仓库 [zhijiao-client](https://github.com/MathewWang/zhijiao-client)，对外安装和 UI 定制请使用新仓库。云端 Relay 在独立的 zhijiao-server 维护；本仓库保留作迁移与集成参考，详情见 [拆分说明](docs/repository-split.md)。本机服务目录已由 server 更名为 runtime，数据路径不变。
+
 macOS 朋友试用：把仓库链接和 [安装指南](INSTALL.md) 交给 Codex。首次执行 `npm run desktop:setup`，之后用 `npm run desktop` 或双击 `启动知交信使.command` 启动；退出程序后用 `npm run desktop:update` 更新并保留本机资料。桌面设置可连接云端；聊天、好友、串门各有独立入口。好友问题先由主人确认，交流结果主动汇报。已有安装请看 [升级指南](docs/upgrade.md)。
 
 角色素材约定：所有新增可选形象必须同时提供透明立绘和配套动作图集。当前八位角色共用四列三行逐帧播放器，支持眨眼、招手、坐下及反向站起；`/?characters=1` 查看形象，`/?motion=1` 切换动作。素材规则见 AGENTS.md，生成记录见 docs/character-motion-collection.md。
@@ -54,9 +56,9 @@ npm start
 
 ## 架构与扩展
 
-`server/adapters.mjs` 的 `adapters` 注册表包含 command/args/env；`parseEvent` 把厂商输出映射成文本；`runAgent` 处理进程、超时和取消。增加引擎不需改变 UI 消息模型。上线产品可把 CLI 适配器换成 Codex app-server / OpenCode HTTP SDK，继续复用角色和通信层。
+`runtime/adapters.mjs` 的 `adapters` 注册表包含 command/args/env；`parseEvent` 把厂商输出映射成文本；`runAgent` 处理进程、超时和取消。增加引擎不需改变 UI 消息模型。上线产品可把 CLI 适配器换成 Codex app-server / OpenCode HTTP SDK，继续复用角色和通信层。
 
-`server/index.mjs` 包含本地服务、消息调度、好友关系与 SQLite；`src` 是 React UI；`electron.cjs` 是可选桌面外壳。仅监听 127.0.0.1，校验 Host/Origin 与 JSON 内容类型。
+`runtime/index.mjs` 包含本地服务、消息调度、好友关系与 SQLite；`src` 是 React UI；`electron.cjs` 是可选桌面外壳。仅监听 127.0.0.1，校验 Host/Origin 与 JSON 内容类型。
 
 角色身份独立于模型会话。Demo 每轮启动独立 CLI 执行，将最近 24 条当前会话记录作为上下文；完整记录持久保存。没有无限长记忆或自动压缩摘要。各好友会话不会收到主人私聊或其他好友的记录；主人私聊可参考最近好友交流，主人汇报可汇总两者。Codex 用临时会话、只读模式且不加载用户配置（本地认证仍沿用）；OpenCode 沿用供应商配置但禁止工具执行、外部插件和自动分享。本版仅用于信息交流，不开放文件操作、任意命令执行和外部发布。
 

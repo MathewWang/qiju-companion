@@ -1,5 +1,7 @@
 # macOS 源码安装与启动
 
+客户端已独立开源：[zhijiao-client](https://github.com/MathewWang/zhijiao-client)。新安装请使用新仓库；旧项目迁移请看新仓库的 [docs/migration.md](https://github.com/MathewWang/zhijiao-client/blob/main/docs/migration.md)，先退出备份，再迁移自己的 .data/registration-v2 与 .data/client，不重新注册。以下是原综合仓库保留的兼容安装说明。
+
 适合愿意使用 Codex 和终端的朋友试用。桌面版可连接云端 Relay，发现在线设备、申请好友、收发消息和串门。无需自行制作安装包；8 个预置角色的立绘和动作图集随代码提供，不会在安装时生成图片或调用模型。
 
 ## 直接交给 Codex

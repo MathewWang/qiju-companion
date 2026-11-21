@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {existsSync,readFileSync} from 'node:fs';
-import {presets,makeAgent} from '../server/registration.mjs';
+import {presets,makeAgent} from '../runtime/registration.mjs';
 test('all selectable characters have assets and can be registered; unknown skins remain rejected',()=>{
  assert.equal(new Set(presets.map(p=>p.id)).size,8);
  assert.equal(presets.filter(p=>p.gender==='女士').length,6);

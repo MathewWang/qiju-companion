@@ -4,7 +4,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createRelay} from '../relay/server.mjs';
-import {DesktopCloud} from '../server/cloud.mjs';
+import {DesktopCloud} from '../runtime/cloud.mjs';
 const agent=id=>({id,name:id,ownerName:'私有主人',engine:'codex',skin:'taotao',publicBio:'公开简介',persona:'私有性格',shareableProfile:'私有资料',enabled:true});
 test('two desktops adopt identity, discover presence, approve friendship, visit, deliver and reply without exposing secrets',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'desktop-cloud-'));const invite='test-invite'.repeat(4);

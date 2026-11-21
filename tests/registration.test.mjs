@@ -1,6 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {makeAgent,publicCard,requestFriend,decideFriend} from '../server/registration.mjs';
-import {parseDecision} from '../server/social.mjs';
+import {makeAgent,publicCard,requestFriend,decideFriend} from '../runtime/registration.mjs';
+import {parseDecision} from '../runtime/social.mjs';
 const input={name:'桃桃',ownerName:'马修',skin:'taotao',engine:'codex',autoAcceptFriends:false,publishProfile:true,shareableProfile:'private'};
 test('registration requires public consent and preserves private profile outside directory',()=>{assert.throws(()=>makeAgent({...input,publishProfile:false}));const a=makeAgent(input);assert.equal(a.shareableProfile,'private');assert.equal(publicCard(a).shareableProfile,undefined);assert.equal(publicCard(a).persona,undefined);assert.notEqual(makeAgent(input).ownerId,a.ownerId)});
 test('friend request needs recipient acceptance and is idempotent',()=>{const s={agents:[{id:'a'},{id:'b'}],links:[],friendRequests:[]};const {request:r}=requestFriend(s,'a','b');assert.equal(s.links.length,0);assert.equal(requestFriend(s,'a','b').request.id,r.id);assert.throws(()=>decideFriend(s,r.id,'a',true));decideFriend(s,r.id,'b',true);decideFriend(s,r.id,'b',true);assert.deepEqual(s.links,[['a','b']]);assert.equal(requestFriend(s,'b','a').alreadyFriends,true)});

@@ -13,7 +13,7 @@ test('owner chat uses current cloud directory and dispatches friend requests thr
  const capture=join(dir,'prompt');
  writeFileSync(join(bin,'codex'),`#!${process.execPath}\nimport {writeFileSync} from 'node:fs';if(process.argv.includes('--version'))console.log('test');else{let p='';for await(const c of process.stdin)p+=c;writeFileSync(${JSON.stringify(capture)},p);console.log(JSON.stringify({type:'item.completed',item:{type:'agent_message',text:JSON.stringify({reply:'申请好友',requestFriend:{to:${JSON.stringify(b.id)}}})}}));}\n`,{mode:0o755});
  const sock=net.createServer();await new Promise(r=>sock.listen(0,'127.0.0.1',r));const port=sock.address().port;await new Promise(r=>sock.close(r));
- const child=spawn(process.execPath,['server/index.mjs'],{env:{...process.env,PATH:bin,PORT:String(port),COMPANION_DATA_DIR:data,CLIENT_DATA_DIR:client},stdio:'ignore'});const url=`http://127.0.0.1:${port}`;
+ const child=spawn(process.execPath,['runtime/index.mjs'],{env:{...process.env,PATH:bin,PORT:String(port),COMPANION_DATA_DIR:data,CLIENT_DATA_DIR:client},stdio:'ignore'});const url=`http://127.0.0.1:${port}`;
  try{
   let state;for(let i=0;i<100;i++){try{state=await(await fetch(url+'/api/state')).json();if(state.cloud?.connected)break}catch{}await delay(30)}assert.equal(state?.cloud?.connected,true);
   const r=await fetch(url+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:agent.id,text:'帮我加小白为好友'})});assert.equal(r.status,200);

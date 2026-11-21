@@ -90,7 +90,7 @@ for(const m of state.messages)if(m.status==='processing')m.status='queued';
 // Migrate interrupted owner turns created by the initial demo build.
 for(const a of state.agents){const own=state.messages.filter(m=>m.agentId===a.id&&!m.channel);const last=own.at(-1);if(last?.role==='user'&&!last.status)last.status='queued';}
 const port=Number(process.env.PORT||4317);const origin=`http://127.0.0.1:${port}`;
-const vite=existsSync(join(root,'dist/index.html'))?null:await (await import('vite')).createServer({root,server:{middlewareMode:true},appType:'spa'});
+const vite=process.env.COMPANION_DEV!=='1'&&existsSync(join(root,'dist/index.html'))?null:await (await import('vite')).createServer({root,server:{middlewareMode:true,host:'127.0.0.1'},appType:'spa'});
 async function body(req){let str='';for await(const c of req){str+=c;if(str.length>32000)throw Error('内容过长')}return JSON.parse(str||'{}')}
 function send(res,code,data){res.writeHead(code,{'Content-Type':'application/json'});res.end(JSON.stringify(data))}
 cloud=new DesktopCloud({dir:resolve(process.env.CLIENT_DATA_DIR||(process.env.COMPANION_DATA_DIR?join(dataDir,'cloud-client'):join(root,'.data/client'))),getAgent:id=>state.agents.find(a=>a.id===id),onChange:notify,onOwnerEvent:({key,agentId,text,messageId,status,ownerConfirmed,role='assistant',reportKind})=>{if(!state.agents.some(a=>a.id===agentId))return false;if(!state.messages.some(m=>m.cloudEventKey===key)){addMessage(agentId,role,text,{status:'done',...(reportKind==='receipt'?{channel:'agent-detail'}:{}),cloudReportKind:reportKind,cloudEventKey:key,cloudMessageId:messageId,cloudStatus:status,cloudOwnerConfirmed:ownerConfirmed});persist();}return true;}});

@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {parseEvent,adapters} from '../server/adapters.mjs';
+import {parseEvent,adapters} from '../runtime/adapters.mjs';
 test('only final user-facing text is emitted, not reasoning/tool output',()=>{
  assert.equal(parseEvent('codex',{type:'item.completed',item:{type:'agent_message',text:'hello'}}),'hello');
  assert.equal(parseEvent('codex',{type:'item.completed',item:{type:'reasoning',text:'private'}}),'');

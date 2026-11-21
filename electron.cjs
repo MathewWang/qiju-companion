@@ -70,7 +70,7 @@ function showAll(){if(setup)setup.show();else{for(const pet of pets.values())pet
 if(!app.requestSingleInstanceLock()){app.quit();}else{
 app.on('second-instance',showAll);
 app.whenReady().then(async()=>{
- try{await fetch(url+'/api/state')}catch{service=spawn(process.execPath,[path.join(__dirname,'server/index.mjs')],{env:{...process.env,ELECTRON_RUN_AS_NODE:'1',PATH:'/opt/homebrew/bin:/usr/local/bin:'+process.env.PATH},stdio:'ignore'})}
+ try{await fetch(url+'/api/state')}catch{service=spawn(process.execPath,[path.join(__dirname,'runtime/index.mjs')],{env:{...process.env,ELECTRON_RUN_AS_NODE:'1',PATH:'/opt/homebrew/bin:/usr/local/bin:'+process.env.PATH},stdio:'ignore'})}
  await ready();
  ({desktopVisitors:pickVisitors}=await import('./shared/desktop-visitors.mjs'));
  const state=await (await fetch(url+'/api/state')).json();

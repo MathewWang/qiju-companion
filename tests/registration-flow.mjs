@@ -1,5 +1,5 @@
 import {spawn} from 'node:child_process';import {mkdtempSync} from 'node:fs';import {tmpdir} from 'node:os';import {join} from 'node:path';import assert from 'node:assert/strict';import {chromium} from '@playwright/test';
-const dir=mkdtempSync(join(tmpdir(),'companion-registration-'));const child=spawn(process.execPath,['server/index.mjs'],{env:{...process.env,PORT:'4322',COMPANION_DATA_DIR:dir},stdio:'ignore'});const base='http://127.0.0.1:4322';const pause=()=>new Promise(r=>setTimeout(r,500));const state=async()=>(await fetch(base+'/api/state')).json();
+const dir=mkdtempSync(join(tmpdir(),'companion-registration-'));const child=spawn(process.execPath,['runtime/index.mjs'],{env:{...process.env,PORT:'4322',COMPANION_DATA_DIR:dir},stdio:'ignore'});const base='http://127.0.0.1:4322';const pause=()=>new Promise(r=>setTimeout(r,500));const state=async()=>(await fetch(base+'/api/state')).json();
 async function post(path,data){const r=await fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});assert.equal(r.status,200,await r.text())}
 async function until(fn){for(let i=0;i<480;i++){const s=await state();if(s.agents.some(a=>a.lastError))throw Error(JSON.stringify(s.agents.map(a=>a.lastError)));if(fn(s))return s;await pause()}throw Error('timeout')}
 let browser;
